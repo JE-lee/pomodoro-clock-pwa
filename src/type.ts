@@ -1,6 +1,7 @@
 export enum STATE {
-  PAUSED,
+  BEFORE_RUN,
   RUNNING,
-  WAITING,
-  RESTING,
+  PAUSED,
+  BEFORE_BREAK,
+  BREAKING,
 }

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { FC } from 'react'
-import { countDownTime, formatTime } from '../../shared'
+import { countDownTime, formatTime, noThrow } from '../../shared'
 import { STATE } from '../../type'
-import { PauseIcon, PlayIcon, ResetIcon } from '../SvgIcon'
-import { notify } from '../../service/notification'
+import { PauseIcon, PlayIcon, ResetIcon, SkipIcon } from '../SvgIcon'
+import { useNotification } from '../../service/notification'
 import NumberInput from './NumberInput'
 
 interface PomodoroClockProps {
@@ -17,6 +17,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
   const [sessionTime, setSessionTime] = useState(30)
   const [breakTime, setBreakTime] = useState(2)
   const [restSeconds, setRestSeconds] = useState(sessionTime * 60)
+  const { confirm, closeNotification } = useNotification()
 
   const onSesionTimeChange = useCallback((value: number) => {
     setSessionTime(value)
@@ -28,44 +29,49 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
   }, [])
 
   useEffect(() => {
-    if (props.clockState === STATE.RUNNING) {
+    if (props.clockState === STATE.BEFORE_RUN) {
+      setRestSeconds(sessionTime * 60)
+    }
+    else if (props.clockState === STATE.RUNNING) {
       // start session
       return countDownTime(
         restSeconds,
         seconds => setRestSeconds(seconds),
-        async () => {
-          // notify session end
-          await notify('It\'s time to take a break!')
+        noThrow(async () => {
           setSessionRound(sessionRound + 1)
-          props.setClockState(STATE.RESTING)
-        },
+          props.setClockState(STATE.BEFORE_BREAK)
+          // notify session end
+          await confirm('It\'s time to take a break!')
+          props.setClockState(STATE.BREAKING)
+        }),
       )
     }
-    else if (props.clockState === STATE.RESTING) {
+    else if (props.clockState === STATE.BEFORE_BREAK) {
       setRestSeconds(breakTime * 60)
+    }
+    else if (props.clockState === STATE.BREAKING) {
       return countDownTime(
         breakTime * 60,
         seconds => setRestSeconds(seconds),
-        async () => {
-          // notify break end
-          await notify('It\'s time to work!')
-          props.setClockState(STATE.RUNNING)
-          setRestSeconds(sessionTime * 60)
+        noThrow(async () => {
           setBreakRound(breakRound + 1)
-        },
+          setRestSeconds(sessionTime * 60)
+          props.setClockState(STATE.BEFORE_RUN)
+          // notify break end
+          await confirm('It\'s time to work!')
+          props.setClockState(STATE.RUNNING)
+        }),
       )
     }
-  }, [props.clockState])
+  }, [props.clockState, sessionTime, breakTime])
 
-  const onSessionClick = () => {
-    // start or resume the session
-    if (props.clockState === STATE.WAITING || props.clockState === STATE.PAUSED)
-      props.setClockState(STATE.RUNNING)
-
-    // pause the session
-    else
-      props.setClockState(STATE.PAUSED)
+  const doStartSession = (restart = true) => {
+    closeNotification()
+    restart && setRestSeconds(sessionTime * 60)
+    props.setClockState(STATE.RUNNING)
   }
+
+  const doPauseSession = () => props.setClockState(STATE.PAUSED)
 
   // restart current session
   const onResetClick = () => {
@@ -73,12 +79,20 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
     props.setClockState(STATE.RUNNING)
   }
 
-  const inSession = props.clockState === STATE.RUNNING || props.clockState === STATE.RESTING
-  let stateText = inSession ? `Session ${sessionRound}` : 'Ready?'
-  if (props.clockState === STATE.RESTING)
-    stateText = inSession ? `Break ${breakRound}` : 'Resting'
+  const doStartBreak = () => {
+    closeNotification()
+    props.setClockState(STATE.BREAKING)
+  }
 
-  const actionVisible = props.clockState !== STATE.RESTING
+  const doSkipBreak = () => {
+    setRestSeconds(sessionTime * 60)
+    props.setClockState(STATE.RUNNING)
+  }
+
+  const inSession = props.clockState !== STATE.PAUSED && props.clockState !== STATE.BEFORE_RUN
+  let stateText = inSession ? `Session ${sessionRound}` : 'Ready?'
+  if (props.clockState === STATE.BEFORE_BREAK || props.clockState === STATE.BREAKING)
+    stateText = inSession ? `Break ${breakRound}` : 'Resting'
 
   return (
     <div className="flex flex-col items-center select-none">
@@ -86,33 +100,40 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
       flex flex-col justify-center items-center bg-pomodoro bg-center bg-no-repeat bg-contain text-xs sm:text-sm xl:text-base 2xl:text-lg">
         <div className="text-[2.2em] leading-tight text-[#FD7477]">{stateText}</div>
         <div className="text-[4em] leading-none font-semibold text-[#FC5E7B]">{formatTime(restSeconds)}</div>
-        {
-          actionVisible
-          && (
-            <>
-              { props.clockState === STATE.RUNNING
-                && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
-                  onClick={onSessionClick}>
-                  <PauseIcon className="w-3 mr-1"></PauseIcon>
-                  <span>PAUSE</span>
-                </div>
-              }
-              { (props.clockState === STATE.WAITING || props.clockState === STATE.PAUSED)
-                  && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
-                  onClick={onSessionClick}>
-                  <PlayIcon className="w-3 mr-1"></PlayIcon>
-                  <span>START</span>
-                </div>
-              }
-              {props.clockState === STATE.PAUSED
-                    && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
-                          onClick={onResetClick}>
-                      <ResetIcon className="w-3 mr-1"></ResetIcon>
-                      <span>Reset</span>
-                    </div>
-                  }
-            </>
-          )
+        { props.clockState === STATE.RUNNING
+          && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
+            onClick={doPauseSession}>
+            <PauseIcon className="w-3 mr-1"></PauseIcon>
+            <span>PAUSE</span>
+          </div>
+        }
+        { (props.clockState === STATE.BEFORE_RUN || props.clockState === STATE.PAUSED)
+            && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
+            onClick={() => doStartSession(props.clockState === STATE.BEFORE_RUN)}>
+            <PlayIcon className="w-3 mr-1"></PlayIcon>
+            <span>START</span>
+          </div>
+        }
+        { (props.clockState === STATE.BEFORE_BREAK)
+            && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
+            onClick={doStartBreak}>
+            <PlayIcon className="w-3 mr-1"></PlayIcon>
+            <span>START</span>
+          </div>
+        }
+        { (props.clockState === STATE.BREAKING)
+            && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
+            onClick={doSkipBreak}>
+            <SkipIcon className="w-5 mr-1"></SkipIcon>
+            <span>SKIP</span>
+          </div>
+        }
+        {props.clockState === STATE.PAUSED
+            && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
+                onClick={onResetClick}>
+            <ResetIcon className="w-3 mr-1"></ResetIcon>
+            <span>Reset</span>
+          </div>
         }
       </div>
       {/* controls */}

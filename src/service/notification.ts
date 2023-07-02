@@ -1,4 +1,6 @@
-export async function notify(message: string): Promise<void> {
+import { useRef } from 'react'
+
+async function notify(message: string): Promise<Notification> {
   await grantNotification()
   const icon = './favicon.ico'
   const notification = new Notification('TAKE A NAP', {
@@ -8,13 +10,27 @@ export async function notify(message: string): Promise<void> {
     body: message,
     requireInteraction: true,
   })
-  // wait for the interaction
-  return new Promise((resolve) => {
-    notification.addEventListener('click', () => {
-      notification.close()
-      resolve()
-    }, { once: true })
-  })
+  return notification
+}
+
+export function useNotification() {
+  const closeNotification = useRef(() => {})
+  const confirm = async (message: string): Promise<void> => {
+    const notification = await notify(message)
+    closeNotification.current = () => notification.close()
+    // wait for the interaction
+    return new Promise((resolve, reject) => {
+      notification.addEventListener('click', () => {
+        notification.close()
+        resolve()
+      }, { once: true })
+      notification.addEventListener('close', () => reject(new Error('You have closed the notification')), { once: true })
+    })
+  }
+  return {
+    closeNotification: () => closeNotification.current(),
+    confirm,
+  }
 }
 
 // grant the notification permission
