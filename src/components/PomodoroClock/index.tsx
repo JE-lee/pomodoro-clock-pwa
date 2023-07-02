@@ -3,6 +3,7 @@ import type { FC } from 'react'
 import { countDownTime, formatTime } from '../../shared'
 import { STATE } from '../../type'
 import { PauseIcon, PlayIcon, ResetIcon } from '../SvgIcon'
+import { notify } from '../../service/notification'
 import NumberInput from './NumberInput'
 
 interface PomodoroClockProps {
@@ -32,7 +33,9 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
       return countDownTime(
         restSeconds,
         seconds => setRestSeconds(seconds),
-        () => {
+        async () => {
+          // notify session end
+          await notify('It\'s time to take a break!')
           setSessionRound(sessionRound + 1)
           props.setClockState(STATE.RESTING)
         },
@@ -43,7 +46,9 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
       return countDownTime(
         breakTime * 60,
         seconds => setRestSeconds(seconds),
-        () => {
+        async () => {
+          // notify break end
+          await notify('It\'s time to work!')
           props.setClockState(STATE.RUNNING)
           setRestSeconds(sessionTime * 60)
           setBreakRound(breakRound + 1)

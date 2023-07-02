@@ -36,7 +36,8 @@
       "react/react-in-jsx-scope": "off",
       "no-debugger": "off",
       "no-restricted-syntax": "off",
-      "no-console": "off"
+      "no-console": "off",
+      "no-new": "off"
     }
   },
   "browserslist": {
