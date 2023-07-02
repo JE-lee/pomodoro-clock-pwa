@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { FC } from 'react'
-import { countDownTime, formatTime, noThrow } from '../../shared'
+import { formatTime, noThrow } from '../../shared'
 import { STATE } from '../../type'
 import { PauseIcon, PlayIcon, ResetIcon, SkipIcon } from '../SvgIcon'
-import { useNotification } from '../../service/notification'
+import { useCountdown, useNotification } from '../../service'
 import NumberInput from './NumberInput'
 
 interface PomodoroClockProps {
@@ -18,6 +18,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
   const [breakTime, setBreakTime] = useState(2)
   const [restSeconds, setRestSeconds] = useState(sessionTime * 60)
   const { confirm, closeNotification } = useNotification()
+  const { countdownTime } = useCountdown()
 
   const onSesionTimeChange = useCallback((value: number) => {
     setSessionTime(value)
@@ -34,7 +35,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
     }
     else if (props.clockState === STATE.RUNNING) {
       // start session
-      return countDownTime(
+      return countdownTime(
         restSeconds,
         seconds => setRestSeconds(seconds),
         noThrow(async () => {
@@ -50,7 +51,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
       setRestSeconds(breakTime * 60)
     }
     else if (props.clockState === STATE.BREAKING) {
-      return countDownTime(
+      return countdownTime(
         breakTime * 60,
         seconds => setRestSeconds(seconds),
         noThrow(async () => {
@@ -85,6 +86,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
   }
 
   const doSkipBreak = () => {
+    closeNotification()
     setRestSeconds(sessionTime * 60)
     props.setClockState(STATE.RUNNING)
   }
