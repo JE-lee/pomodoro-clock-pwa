@@ -44,6 +44,9 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
           // notify session end
           await confirm('It\'s time to take a break!')
           props.setClockState(STATE.BREAKING)
+          // make sure window is frontground
+          // it works on PWA
+          window.focus()
         }),
       )
     }
@@ -61,6 +64,9 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
           // notify break end
           await confirm('It\'s time to work!')
           props.setClockState(STATE.RUNNING)
+          // make sure window is frontground
+          // it works on PWA
+          window.focus()
         }),
       )
     }

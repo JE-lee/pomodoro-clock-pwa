@@ -3,7 +3,7 @@ import { useRef } from 'react'
 async function notify(message: string): Promise<Notification> {
   await grantNotification()
   const icon = './favicon.ico'
-  const notification = new Notification('TAKE A NAP', {
+  const notification = new Notification('TAKE A BREAK', {
     icon,
     image: icon,
     badge: icon,
