@@ -4,7 +4,7 @@ import { formatTime, noThrow } from '../../shared'
 import { STATE } from '../../type'
 import { PauseIcon, PlayIcon, ResetIcon, SkipIcon } from '../SvgIcon'
 import { useCountdown, useNotification } from '../../service'
-import NumberInput from './NumberInput'
+import NumberInput from '../NumberInput'
 
 interface PomodoroClockProps {
   clockState: STATE

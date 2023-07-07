@@ -5,7 +5,7 @@ async function notify(message: string): Promise<Notification> {
   const icon = './favicon.ico'
   const notification = new Notification('TAKE A BREAK', {
     icon,
-    image: icon,
+    image: './logo512.png',
     badge: icon,
     body: message,
     requireInteraction: true,
