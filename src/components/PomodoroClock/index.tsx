@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import type { FC } from 'react'
 import { formatTime, noThrow } from '../../shared'
 import { STATE } from '../../type'
 import { PauseIcon, PlayIcon, ResetIcon, SkipIcon } from '../SvgIcon'
 import { useCountdown, useNotification } from '../../service'
 import NumberInput from '../NumberInput'
+import Flip from '../Flip'
+import { useFade } from '../../hooks'
 
 interface PomodoroClockProps {
   clockState: STATE
@@ -17,17 +19,11 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
   const [sessionTime, setSessionTime] = useState(30)
   const [breakTime, setBreakTime] = useState(2)
   const [restSeconds, setRestSeconds] = useState(sessionTime * 60)
+  const [clockFlip, setClockFlip] = useState(false)
+  const { elRef: controlsRef, fadeIn, fadeOut } = useFade()
+
   const { confirm, closeNotification } = useNotification()
   const { countdownTime } = useCountdown()
-
-  const onSesionTimeChange = useCallback((value: number) => {
-    setSessionTime(value)
-    setRestSeconds(value * 60)
-  }, [])
-
-  const onBreakTimeChange = useCallback((value: number) => {
-    setBreakTime(value)
-  }, [])
 
   useEffect(() => {
     if (props.clockState === STATE.BEFORE_RUN) {
@@ -72,6 +68,24 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
     }
   }, [props.clockState, sessionTime, breakTime])
 
+  const controlsVisible = !isInSession(props.clockState)
+  useLayoutEffect(() => {
+    setClockFlip(!clockFlip)
+    if (controlsVisible)
+      fadeIn(800)
+    else
+      fadeOut(400)
+  }, [controlsVisible])
+
+  const onSesionTimeChange = useCallback((value: number) => {
+    setSessionTime(value)
+    setRestSeconds(value * 60)
+  }, [])
+
+  const onBreakTimeChange = useCallback((value: number) => {
+    setBreakTime(value)
+  }, [])
+
   const doStartSession = (restart = true) => {
     closeNotification()
     restart && setRestSeconds(sessionTime * 60)
@@ -97,64 +111,69 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
     props.setClockState(STATE.RUNNING)
   }
 
-  const inSession = props.clockState !== STATE.PAUSED && props.clockState !== STATE.BEFORE_RUN
+  const inSession = isInSession(props.clockState)
   let stateText = inSession ? `Session ${sessionRound}` : 'Ready?'
   if (props.clockState === STATE.BEFORE_BREAK || props.clockState === STATE.BREAKING)
     stateText = inSession ? `Break ${breakRound}` : 'Resting'
 
   return (
     <div className="flex flex-col items-center select-none">
-      <div className="w-[55vmin] min-w-[360px] aspect-square min-h-[360px]
-      flex flex-col justify-center items-center bg-pomodoro bg-center bg-no-repeat bg-contain text-xs sm:text-sm xl:text-base 2xl:text-lg">
-        <div className="text-[2.2em] leading-tight text-[#FD7477]">{stateText}</div>
-        <div className="text-[4em] leading-none font-semibold text-[#FC5E7B]">{formatTime(restSeconds)}</div>
-        { props.clockState === STATE.RUNNING
-          && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
-            onClick={doPauseSession}>
-            <PauseIcon className="w-3 mr-1"></PauseIcon>
-            <span>PAUSE</span>
-          </div>
-        }
-        { (props.clockState === STATE.BEFORE_RUN || props.clockState === STATE.PAUSED)
+      <Flip trigger={clockFlip}>
+        <div className="w-[55vmin] min-w-[360px] aspect-square min-h-[360px]
+            flex flex-col justify-center items-center bg-pomodoro bg-center bg-no-repeat bg-contain text-xs sm:text-sm xl:text-base 2xl:text-lg">
+          <div className="text-[2.2em] leading-tight text-[#FD7477]">{stateText}</div>
+          <div className="text-[4em] leading-none font-semibold text-[#FC5E7B]">{formatTime(restSeconds)}</div>
+          { props.clockState === STATE.RUNNING
             && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
-            onClick={() => doStartSession(props.clockState === STATE.BEFORE_RUN)}>
-            <PlayIcon className="w-3 mr-1"></PlayIcon>
-            <span>START</span>
-          </div>
-        }
-        { (props.clockState === STATE.BEFORE_BREAK)
-            && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
-            onClick={doStartBreak}>
-            <PlayIcon className="w-3 mr-1"></PlayIcon>
-            <span>START</span>
-          </div>
-        }
-        { (props.clockState === STATE.BREAKING)
-            && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
-            onClick={doSkipBreak}>
-            <SkipIcon className="w-5 mr-1"></SkipIcon>
-            <span>SKIP</span>
-          </div>
-        }
-        {props.clockState === STATE.PAUSED
-            && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
-                onClick={onResetClick}>
-            <ResetIcon className="w-3 mr-1"></ResetIcon>
-            <span>Reset</span>
-          </div>
-        }
-      </div>
+              onClick={doPauseSession}>
+              <PauseIcon className="w-3 mr-1"></PauseIcon>
+              <span>PAUSE</span>
+            </div>
+          }
+          { (props.clockState === STATE.BEFORE_RUN || props.clockState === STATE.PAUSED)
+              && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
+              onClick={() => doStartSession(props.clockState === STATE.BEFORE_RUN)}>
+              <PlayIcon className="w-3 mr-1"></PlayIcon>
+              <span>START</span>
+            </div>
+          }
+          { (props.clockState === STATE.BEFORE_BREAK)
+              && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
+              onClick={doStartBreak}>
+              <PlayIcon className="w-3 mr-1"></PlayIcon>
+              <span>START</span>
+            </div>
+          }
+          { (props.clockState === STATE.BREAKING)
+              && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
+              onClick={doSkipBreak}>
+              <SkipIcon className="w-5 mr-1"></SkipIcon>
+              <span>SKIP</span>
+            </div>
+          }
+          {props.clockState === STATE.PAUSED
+              && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
+                  onClick={onResetClick}>
+              <ResetIcon className="w-3 mr-1"></ResetIcon>
+              <span>Reset</span>
+            </div>
+          }
+        </div>
+      </Flip>
       {/* controls */}
       {
-        !inSession
-         && <div className="flex items-center mt-8">
-           <NumberInput label="SESSION" value={sessionTime}
-           onChange={onSesionTimeChange} min={0}></NumberInput>
-           <NumberInput label="BREAK" className="ml-5" value={breakTime} onChange={onBreakTimeChange} min={0}></NumberInput>
-         </div>
+        <div ref={controlsRef} className="flex items-center mt-8">
+          <NumberInput label="SESSION" value={sessionTime}
+          onChange={onSesionTimeChange} min={0}></NumberInput>
+          <NumberInput label="BREAK" className="ml-5" value={breakTime} onChange={onBreakTimeChange} min={0}></NumberInput>
+        </div>
       }
     </div>
   )
+}
+
+function isInSession(clockState: STATE) {
+  return clockState !== STATE.PAUSED && clockState !== STATE.BEFORE_RUN
 }
 
 export default PomodoroClock
