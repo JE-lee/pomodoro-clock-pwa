@@ -44,10 +44,11 @@ export function grantNotification(): Promise<void> {
       resolve()
     }
     else if (Notification.permission !== 'denied') {
-      return Notification.requestPermission().then((permission) => {
+      Notification.requestPermission().then((permission) => {
         if (permission !== 'granted')
           throw new Error('You have denied the notification permission')
-      })
+        resolve()
+      }).catch(err => reject(err))
     }
     else {
       reject(new Error('You have denied the notification permission'))

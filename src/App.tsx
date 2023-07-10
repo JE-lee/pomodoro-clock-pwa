@@ -2,7 +2,6 @@ import { useEffect, useReducer, useRef, useState } from 'react'
 import PomodoroClock from './components/PomodoroClock'
 import type { IClockContext } from './type'
 import { STATE } from './type'
-import { grantNotification } from './service/notification'
 import { SettingIcon } from './components/SvgIcon'
 import { formDataToObject } from './shared'
 import { ClockContext, defaultClockContext, getClockContext, saveClockContext } from './service'
@@ -32,11 +31,6 @@ function App() {
   const updateSetting = (payload: Partial<IClockContext>) => {
     dispatch({ type: 'update', payload })
   }
-
-  // grant Notification permission
-  useEffect(() => {
-    grantNotification()
-  }, [])
 
   // save clock context to localStorage
   useEffect(() => {

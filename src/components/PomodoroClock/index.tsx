@@ -3,7 +3,7 @@ import type { FC } from 'react'
 import { formatTime, noThrow } from '../../shared'
 import { STATE, ThreadType } from '../../type'
 import { PauseIcon, PlayIcon, ResetIcon, SkipIcon } from '../SvgIcon'
-import { ClockContext, addThread, useCountdown, useNotification } from '../../service'
+import { ClockContext, addThread, grantNotification, useCountdown, useNotification } from '../../service'
 import NumberInput from '../NumberInput'
 import Flip from '../Flip'
 import { useFade } from '../../hooks'
@@ -19,6 +19,8 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
   const [breakRound, setBreakRound] = useState(1)
   const [restSeconds, setRestSeconds] = useState(sessionTime * 60)
   const [clockFlip, setClockFlip] = useState(false)
+  const shouldShowNotiPermissionModal = useRef(true)
+
   const { elRef: controlsRef, fadeIn, fadeOut } = useFade()
   const threadStartTimestamp = useRef(Date.now())
 
@@ -85,6 +87,11 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
     }
   }, [props.clockState, sessionTime, breakTime])
 
+  useLayoutEffect(() => {
+    if (Notification.permission === 'denied')
+      showNotiPermissionModal()
+  }, [])
+
   const controlsVisible = !isInSession(props.clockState)
   useLayoutEffect(() => {
     setClockFlip(!clockFlip)
@@ -103,7 +110,16 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
     updateSetting?.({ breakTime: value })
   }, [])
 
-  const doStartSession = (restart = true) => {
+  const doStartSession = async (restart = true) => {
+    // request notification permission
+    try {
+      if (Notification.permission !== 'granted')
+        await grantNotification()
+    }
+    catch (error) {
+      showNotiPermissionModal()
+    }
+
     closeNotification()
     restart && setRestSeconds(sessionTime * 60)
     props.setClockState(STATE.RUNNING)
@@ -140,6 +156,17 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
       endTimestamp: Date.now(),
       expectedTime: breakTime * 60,
     })
+  }
+
+  function showNotiPermissionModal() {
+    if (!shouldShowNotiPermissionModal.current)
+      return
+
+    const dialog = document.getElementById('notiPermissionModal') as HTMLDialogElement
+    if (dialog) {
+      dialog.close()
+      dialog.showModal()
+    }
   }
 
   const inSession = isInSession(props.clockState)
@@ -198,6 +225,27 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
           onChange={onSesionTimeChange} min={0}></NumberInput>
           <NumberInput label="BREAK" className="ml-5" value={breakTime} onChange={onBreakTimeChange} min={0}></NumberInput>
         </div>
+      }
+      {
+        <dialog id="notiPermissionModal" className="modal">
+          <form method="dialog" className="modal-box">
+            <h3 className="text-lg font-bold">Hello</h3>
+            <p className="py-2">
+              {'The app requires you to authorize your browser\'s notification permissions for an optimal experience!'}
+            </p>
+            <p className="py-2">
+              Please click the button in the upper left corner of your browser to re-authorize, or check out
+              &nbsp;<a className="link" href="https://support.google.com/chrome/answer/3220216?hl=en&co=GENIE.Platform%3DDesktop" target="_blank" rel="noreferrer">this page</a> for help
+            </p>
+            <div className="modal-action">
+              <button className="btn btn-md" onClick={() => (shouldShowNotiPermissionModal.current = false)}>No more reminders</button>
+            </div>
+          </form>
+          <form method="dialog" className="modal-backdrop">
+            <button>close</button>
+          </form>
+
+        </dialog>
       }
     </div>
   )
