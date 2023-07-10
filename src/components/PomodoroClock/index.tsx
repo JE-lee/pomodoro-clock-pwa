@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { FC } from 'react'
 import { formatTime, noThrow } from '../../shared'
-import { STATE } from '../../type'
+import { STATE, ThreadType } from '../../type'
 import { PauseIcon, PlayIcon, ResetIcon, SkipIcon } from '../SvgIcon'
 import { useCountdown, useNotification } from '../../service'
 import NumberInput from '../NumberInput'
 import Flip from '../Flip'
 import { useFade } from '../../hooks'
+import { addThread } from '../../service/db'
 
 interface PomodoroClockProps {
   clockState: STATE
@@ -21,6 +22,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
   const [restSeconds, setRestSeconds] = useState(sessionTime * 60)
   const [clockFlip, setClockFlip] = useState(false)
   const { elRef: controlsRef, fadeIn, fadeOut } = useFade()
+  const threadStartTimestamp = useRef(Date.now())
 
   const { confirm, closeNotification } = useNotification()
   const { countdownTime } = useCountdown()
@@ -31,12 +33,21 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
     }
     else if (props.clockState === STATE.RUNNING) {
       // start session
+      threadStartTimestamp.current = Date.now()
       return countdownTime(
         restSeconds,
         seconds => setRestSeconds(seconds),
         noThrow(async () => {
           setSessionRound(sessionRound + 1)
           props.setClockState(STATE.BEFORE_BREAK)
+          // save db
+          addThread({
+            type: ThreadType.SESSION,
+            startTimestamp: threadStartTimestamp.current,
+            endTimestamp: Date.now(),
+            expectedTime: sessionTime * 60,
+          })
+
           // notify session end
           await confirm('It\'s time to take a break!')
           props.setClockState(STATE.BREAKING)
@@ -50,6 +61,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
       setRestSeconds(breakTime * 60)
     }
     else if (props.clockState === STATE.BREAKING) {
+      threadStartTimestamp.current = Date.now()
       return countdownTime(
         breakTime * 60,
         seconds => setRestSeconds(seconds),
@@ -57,6 +69,13 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
           setBreakRound(breakRound + 1)
           setRestSeconds(sessionTime * 60)
           props.setClockState(STATE.BEFORE_RUN)
+          // save db
+          addThread({
+            type: ThreadType.BREAK,
+            startTimestamp: threadStartTimestamp.current,
+            endTimestamp: Date.now(),
+            expectedTime: breakTime * 60,
+          })
           // notify break end
           await confirm('It\'s time to work!')
           props.setClockState(STATE.RUNNING)
@@ -98,6 +117,13 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
   const onResetClick = () => {
     setRestSeconds(sessionTime * 60)
     props.setClockState(STATE.RUNNING)
+    // save db
+    addThread({
+      type: ThreadType.SESSION,
+      startTimestamp: threadStartTimestamp.current,
+      endTimestamp: Date.now(),
+      expectedTime: sessionTime * 60,
+    })
   }
 
   const doStartBreak = () => {
@@ -109,6 +135,13 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
     closeNotification()
     setRestSeconds(sessionTime * 60)
     props.setClockState(STATE.RUNNING)
+    // save db
+    addThread({
+      type: ThreadType.BREAK,
+      startTimestamp: threadStartTimestamp.current,
+      endTimestamp: Date.now(),
+      expectedTime: breakTime * 60,
+    })
   }
 
   const inSession = isInSession(props.clockState)

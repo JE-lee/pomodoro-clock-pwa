@@ -12,3 +12,16 @@ export interface ELementRect {
   width: number
   height: number
 }
+
+export enum ThreadType {
+  SESSION,
+  BREAK,
+}
+export interface IThread {
+  id?: number
+  uid?: string
+  type: ThreadType
+  startTimestamp: number
+  endTimestamp: number
+  expectedTime: number
+}
