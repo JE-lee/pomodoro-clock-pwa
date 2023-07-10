@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { FC } from 'react'
 import { formatTime, noThrow } from '../../shared'
 import { STATE, ThreadType } from '../../type'
 import { PauseIcon, PlayIcon, ResetIcon, SkipIcon } from '../SvgIcon'
-import { useCountdown, useNotification } from '../../service'
+import { ClockContext, addThread, useCountdown, useNotification } from '../../service'
 import NumberInput from '../NumberInput'
 import Flip from '../Flip'
 import { useFade } from '../../hooks'
-import { addThread } from '../../service/db'
 
 interface PomodoroClockProps {
   clockState: STATE
@@ -15,10 +14,9 @@ interface PomodoroClockProps {
 }
 
 const PomodoroClock: FC<PomodoroClockProps> = (props) => {
+  const { sessionTime, breakTime, sessionHints, breakHints, silent, update: updateSetting } = useContext(ClockContext)
   const [sessionRound, setSessionRound] = useState(1)
   const [breakRound, setBreakRound] = useState(1)
-  const [sessionTime, setSessionTime] = useState(30)
-  const [breakTime, setBreakTime] = useState(2)
   const [restSeconds, setRestSeconds] = useState(sessionTime * 60)
   const [clockFlip, setClockFlip] = useState(false)
   const { elRef: controlsRef, fadeIn, fadeOut } = useFade()
@@ -49,11 +47,11 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
           })
 
           // notify session end
-          await confirm('It\'s time to take a break!')
+          await confirm(breakHints)
           props.setClockState(STATE.BREAKING)
           // make sure window is frontground
           // it works on PWA
-          window.focus()
+          !silent && window.focus()
         }),
       )
     }
@@ -77,11 +75,11 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
             expectedTime: breakTime * 60,
           })
           // notify break end
-          await confirm('It\'s time to work!')
+          await confirm(sessionHints)
           props.setClockState(STATE.RUNNING)
           // make sure window is frontground
           // it works on PWA
-          window.focus()
+          !silent && window.focus()
         }),
       )
     }
@@ -97,12 +95,12 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
   }, [controlsVisible])
 
   const onSesionTimeChange = useCallback((value: number) => {
-    setSessionTime(value)
+    updateSetting?.({ sessionTime: value })
     setRestSeconds(value * 60)
   }, [])
 
   const onBreakTimeChange = useCallback((value: number) => {
-    setBreakTime(value)
+    updateSetting?.({ breakTime: value })
   }, [])
 
   const doStartSession = (restart = true) => {

@@ -25,3 +25,11 @@ export interface IThread {
   endTimestamp: number
   expectedTime: number
 }
+
+export interface IClockContext {
+  sessionTime: number
+  breakTime: number
+  sessionHints: string
+  breakHints: string
+  silent: boolean
+}
