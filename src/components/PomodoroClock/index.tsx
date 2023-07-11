@@ -87,11 +87,6 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
     }
   }, [props.clockState, sessionTime, breakTime])
 
-  useLayoutEffect(() => {
-    if (Notification.permission === 'denied')
-      showNotiPermissionModal()
-  }, [])
-
   const controlsVisible = !isInSession(props.clockState)
   useLayoutEffect(() => {
     setClockFlip(!clockFlip)
@@ -177,39 +172,39 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
           <div className="text-[2.2em] leading-tight text-[#FD7477]">{stateText}</div>
           <div className="text-[4em] leading-none font-semibold text-[#FC5E7B]">{formatTime(restSeconds)}</div>
           { props.clockState === STATE.RUNNING
-            && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
+            && <button className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
               onClick={doPauseSession}>
               <PauseIcon className="w-3 mr-1"></PauseIcon>
               <span>PAUSE</span>
-            </div>
+            </button>
           }
           { (props.clockState === STATE.BEFORE_RUN || props.clockState === STATE.PAUSED)
-              && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
+              && <button className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
               onClick={() => doStartSession(props.clockState === STATE.BEFORE_RUN)}>
               <PlayIcon className="w-3 mr-1"></PlayIcon>
               <span>START</span>
-            </div>
+            </button>
           }
           { (props.clockState === STATE.BEFORE_BREAK)
-              && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
+              && <button className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
               onClick={doStartBreak}>
               <PlayIcon className="w-3 mr-1"></PlayIcon>
               <span>START</span>
-            </div>
+            </button>
           }
           { (props.clockState === STATE.BREAKING)
-              && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
+              && <button className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
               onClick={doSkipBreak}>
               <SkipIcon className="w-5 mr-1"></SkipIcon>
               <span>SKIP</span>
-            </div>
+            </button>
           }
           {props.clockState === STATE.PAUSED
-              && <div className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
+              && <button className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
                   onClick={onResetClick}>
               <ResetIcon className="w-3 mr-1"></ResetIcon>
               <span>Reset</span>
-            </div>
+            </button>
           }
         </div>
       </Flip>
