@@ -1,7 +1,9 @@
 import { useRef } from 'react'
 
 async function notify(message: string): Promise<Notification> {
-  await grantNotification()
+  if (Notification.permission !== 'granted')
+    throw new Error('You have denied the notification permission')
+
   const icon = './favicon.ico'
   const notification = new Notification('TAKE A BREAK', {
     icon,
@@ -31,27 +33,4 @@ export function useNotification() {
     closeNotification: () => closeNotification.current(),
     confirm,
   }
-}
-
-// grant the notification permission
-export function grantNotification(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (!('Notification' in window)) {
-      // alert('This browser does not support desktop notification')
-      reject(new Error('This browser does not support desktop notification'))
-    }
-    else if (Notification.permission === 'granted') {
-      resolve()
-    }
-    else if (Notification.permission !== 'denied') {
-      Notification.requestPermission().then((permission) => {
-        if (permission !== 'granted')
-          throw new Error('You have denied the notification permission')
-        resolve()
-      }).catch(err => reject(err))
-    }
-    else {
-      reject(new Error('You have denied the notification permission'))
-    }
-  })
 }

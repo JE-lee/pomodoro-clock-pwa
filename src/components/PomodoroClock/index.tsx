@@ -3,7 +3,7 @@ import type { FC } from 'react'
 import { formatTime, noThrow } from '../../shared'
 import { STATE, ThreadType } from '../../type'
 import { PauseIcon, PlayIcon, ResetIcon, SkipIcon } from '../SvgIcon'
-import { ClockContext, addThread, grantNotification, useCountdown, useNotification } from '../../service'
+import { ClockContext, addThread, useCountdown, useNotification } from '../../service'
 import NumberInput from '../NumberInput'
 import Flip from '../Flip'
 import { useFade } from '../../hooks'
@@ -112,13 +112,8 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
 
   const doStartSession = async (restart = true) => {
     // request notification permission
-    try {
-      if (Notification.permission !== 'granted')
-        await grantNotification()
-    }
-    catch (error) {
+    if (Notification.permission !== 'granted')
       showNotiPermissionModal()
-    }
 
     closeNotification()
     restart && setRestSeconds(sessionTime * 60)
@@ -229,15 +224,18 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
       {
         <dialog id="notiPermissionModal" className="modal">
           <form method="dialog" className="modal-box">
+            <button className="absolute btn btn-sm btn-circle btn-ghost right-2 top-2">x</button>
             <h3 className="text-lg font-bold">Hello</h3>
             <p className="py-2">
               {'The app requires you to authorize your browser\'s notification permissions for an optimal experience!'}
             </p>
             <p className="py-2">
               Please click the button in the upper left corner of your browser to re-authorize, or check out
-              &nbsp;<a className="link" href="https://support.google.com/chrome/answer/3220216?hl=en&co=GENIE.Platform%3DDesktop" target="_blank" rel="noreferrer">this page</a> for help
+              &nbsp;<a className="link" href="https://support.google.com/chrome/answer/3220216?hl=en&co=GENIE.Platform%3DDesktop" target="_blank" rel="noreferrer">this page</a> for help.
+              &nbsp;if you are using mac, look at  <a className="link" target="_blank" href="https://support.apple.com/en-hk/guide/safari/sfri40734/mac" rel="noreferrer">this website</a> for help.
             </p>
             <div className="modal-action">
+              { Notification.permission === 'default' && <button className="btn btn-md text-white bg-[#FC5E7B]" onClick={() => Notification.requestPermission()}>AUTHORIZE</button>}
               <button className="btn btn-md" onClick={() => (shouldShowNotiPermissionModal.current = false)}>No more reminders</button>
             </div>
           </form>
