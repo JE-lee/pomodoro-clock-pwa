@@ -1,6 +1,7 @@
 import { type FC, useLayoutEffect, useRef } from 'react'
 import type { ELementRect } from '../../type'
 import { isEqualRect } from '../../shared'
+import { useWindowResize } from '../../hooks'
 
 interface FlipProps {
   children: React.ReactNode
@@ -13,6 +14,14 @@ interface FlipProps {
 const Flip: FC<FlipProps> = (props) => {
   const boxRef = useRef<HTMLDivElement>(null)
   const childRectMap = useRef<WeakMap<Element, ELementRect>>(new WeakMap())
+
+  useWindowResize(() => {
+    const childEls = boxRef.current?.children || []
+    Array.from(childEls).forEach((el) => {
+      const rect = el.getBoundingClientRect()
+      childRectMap.current.set(el, rect)
+    })
+  })
 
   useLayoutEffect(() => {
     const childEls = boxRef.current?.children || []
