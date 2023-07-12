@@ -26,3 +26,11 @@
   }
 
 }
+
+.drawer-bottom.drawer .drawer-toggle ~ .drawer-side > *:not(.drawer-overlay) {
+  transform: translateY(100%);
+}
+
+.drawer-bottom.drawer .drawer-toggle:checked ~ .drawer-side > *:not(.drawer-overlay) {
+  transform: translateY(0);
+}

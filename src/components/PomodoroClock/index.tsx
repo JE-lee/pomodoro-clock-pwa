@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { FC } from 'react'
-import { formatTime, noThrow } from '../../shared'
+import { formatMinAndSec, noThrow } from '../../shared'
 import { STATE, ThreadType } from '../../type'
 import { PauseIcon, PlayIcon, ResetIcon, SkipIcon } from '../SvgIcon'
 import { ClockContext, addThread, useCountdown, useNotification } from '../../service'
@@ -170,7 +170,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
         <div className="w-[55vmin] min-w-[360px] aspect-square min-h-[360px]
             flex flex-col justify-center items-center bg-pomodoro bg-center bg-no-repeat bg-contain text-xs sm:text-sm xl:text-base 2xl:text-lg">
           <div className="text-[2.2em] leading-tight text-[#FD7477]">{stateText}</div>
-          <div className="text-[4em] leading-none font-semibold text-[#FC5E7B]">{formatTime(restSeconds)}</div>
+          <div className="text-[4em] leading-none font-semibold text-[#FC5E7B]">{formatMinAndSec(restSeconds)}</div>
           { props.clockState === STATE.RUNNING
             && <button className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
               onClick={doPauseSession}>

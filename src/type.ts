@@ -33,3 +33,17 @@ export interface IClockContext {
   breakHints: string
   silent: boolean
 }
+
+export interface HeatMapItem {
+  date: string
+  value: number
+  tooltip?: string
+}
+
+export type HeatMapData = HeatMapItem[][]
+
+export interface DataOfDay {
+  date: string
+  sessions: number
+  breaks: number
+}
