@@ -47,3 +47,8 @@ export interface DataOfDay {
   sessions: number
   breaks: number
 }
+
+export interface IHeatMapContext {
+  heatMapData: HeatMapItem[]
+  refresh: () => void
+}

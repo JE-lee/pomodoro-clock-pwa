@@ -8,8 +8,8 @@ class ThreadDatabase extends Dexie {
 
   constructor() {
     super('ThreadDatabase')
-    this.version(2).stores({
-      threads: '++id, uid, type, startTimestamp, endTimeStamp, expectedTime',
+    this.version(3).stores({
+      threads: '++id, startTimestamp',
     })
     this.threads = this.table('threads')
   }
@@ -30,7 +30,7 @@ export function clearThread() {
   return db.threads.clear()
 }
 
-export async function getLastYearThreadData(): Promise<DataOfDay[]> {
+export async function getThreadDataOfLastYear(): Promise<DataOfDay[]> {
   const db = getThreadDb()
   // 查询近一年的数据
   const threads = await db.threads.where('startTimestamp').above(Date.now() - 365 * 24 * 60 * 60 * 1000).sortBy('startTimestamp')
@@ -40,13 +40,11 @@ export async function getLastYearThreadData(): Promise<DataOfDay[]> {
     heatMapData[date] = heatMapData[date] ?? {
       sessions: 0,
       breaks: 0,
+      date,
     }
     heatMapData[date].sessions += thread.type === ThreadType.SESSION ? 1 : 0
     heatMapData[date].breaks += thread.type === ThreadType.BREAK ? 1 : 0
   })
 
-  return Object.entries(heatMapData).map(([date, data]) => ({
-    ...data,
-    date,
-  }))
+  return Object.values(heatMapData)
 }

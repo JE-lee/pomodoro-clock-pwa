@@ -3,7 +3,7 @@ import type { FC } from 'react'
 import { formatMinAndSec, noThrow } from '../../shared'
 import { STATE, ThreadType } from '../../type'
 import { PauseIcon, PlayIcon, ResetIcon, SkipIcon } from '../SvgIcon'
-import { ClockContext, addThread, useCountdown, useNotification } from '../../service'
+import { ClockContext, HeatMapContext, addThread, useCountdown, useNotification } from '../../service'
 import NumberInput from '../NumberInput'
 import Flip from '../Flip'
 import { useFade } from '../../hooks'
@@ -15,6 +15,7 @@ interface PomodoroClockProps {
 
 const PomodoroClock: FC<PomodoroClockProps> = (props) => {
   const { sessionTime, breakTime, sessionHints, breakHints, silent, update: updateSetting } = useContext(ClockContext)
+  const { refresh: refreshHeatMap } = useContext(HeatMapContext)
   const [sessionRound, setSessionRound] = useState(1)
   const [breakRound, setBreakRound] = useState(1)
   const [restSeconds, setRestSeconds] = useState(sessionTime * 60)
@@ -46,7 +47,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
             startTimestamp: threadStartTimestamp.current,
             endTimestamp: Date.now(),
             expectedTime: sessionTime * 60,
-          })
+          }).then(refreshHeatMap)
 
           // notify session end
           await confirm(breakHints)
@@ -75,7 +76,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
             startTimestamp: threadStartTimestamp.current,
             endTimestamp: Date.now(),
             expectedTime: breakTime * 60,
-          })
+          }).then(refreshHeatMap)
           // notify break end
           await confirm(sessionHints)
           props.setClockState(STATE.RUNNING)
@@ -127,7 +128,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
       startTimestamp: threadStartTimestamp.current,
       endTimestamp: Date.now(),
       expectedTime: sessionTime * 60,
-    })
+    }).then(refreshHeatMap)
   }
 
   const doStartBreak = () => {
@@ -145,7 +146,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
       startTimestamp: threadStartTimestamp.current,
       endTimestamp: Date.now(),
       expectedTime: breakTime * 60,
-    })
+    }).then(refreshHeatMap)
   }
 
   function showNotiPermissionModal() {

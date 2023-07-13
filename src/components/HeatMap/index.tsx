@@ -1,4 +1,4 @@
-import { type FC, useEffect, useState } from 'react'
+import { type FC } from 'react'
 import type { HeatMapData, HeatMapItem } from '../../type'
 import Tooltip from '../Tooltip'
 
@@ -40,7 +40,7 @@ const monthWidth: Record<string, string> = {
   28: 'w-28',
 }
 
-const steps = [1, 4, 8, 12]
+const steps = [1, 5, 9, 14]
 
 function getStepIndex(diff: number) {
   let stepIndex = 0
@@ -48,15 +48,11 @@ function getStepIndex(diff: number) {
     if (diff > steps[i])
       stepIndex += 1
   }
-  return stepIndex
+  return Math.max(Math.min(steps.length - 1, stepIndex), 0)
 }
 
 const HeatMap: FC<HeatMapProps> = (props) => {
-  const [heatMapData, setHeatMapData] = useState<HeatMapData>([])
-
-  useEffect(() => {
-    setHeatMapData(formateHeatMapData(props.data))
-  }, [props.data])
+  const heatMapData = formateHeatMapData(props.data)
 
   // heatmap dots
   const dots = heatMapData.map((row, rIndex) => {
