@@ -1,13 +1,13 @@
 import { useRef } from 'react'
 
-async function notify(message: string): Promise<Notification> {
+async function notify(message: string, image = './logo512.png'): Promise<Notification> {
   if (Notification.permission !== 'granted')
     throw new Error('You have denied the notification permission')
 
   const icon = './favicon.ico'
   const notification = new Notification('TAKE A BREAK', {
-    icon,
-    image: './logo512.png',
+    icon: image,
+    image,
     badge: icon,
     body: message,
     requireInteraction: true,
@@ -17,8 +17,8 @@ async function notify(message: string): Promise<Notification> {
 
 export function useNotification() {
   const closeNotification = useRef(() => {})
-  const confirm = async (message: string): Promise<void> => {
-    const notification = await notify(message)
+  const confirm = async (message: string, image?: string): Promise<void> => {
+    const notification = await notify(message, image)
     closeNotification.current = () => notification.close()
     // wait for the interaction
     return new Promise((resolve, reject) => {

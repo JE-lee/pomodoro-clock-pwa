@@ -55,7 +55,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
           // it works on PWA
           !silent && window.focus()
           // notify session end
-          await confirm(breakHints)
+          await confirm(breakHints, './break.png')
           props.setClockState(STATE.BREAKING)
         }),
       )
@@ -82,7 +82,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
           // it works on PWA
           !silent && window.focus()
           // notify break end
-          await confirm(sessionHints)
+          await confirm(sessionHints, './work.png')
           props.setClockState(STATE.RUNNING)
         }),
       )
