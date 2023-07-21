@@ -29,3 +29,9 @@ export function getDateRaw(time: string | Date | number) {
   const dayInMonth = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${dayInMonth}`
 }
+
+export function isEqualDate(time1: Date, time2: Date) {
+  return time1.getFullYear() === time2.getFullYear()
+    && time1.getMonth() === time2.getMonth()
+    && time1.getDate() === time2.getDate()
+}

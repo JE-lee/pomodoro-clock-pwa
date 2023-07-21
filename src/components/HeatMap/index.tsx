@@ -9,8 +9,10 @@ interface HeatMapProps {
 
 const colors = [
   'bg-[#FFFFFF]',
+  'bg-[#F3F3F3]',
   'bg-[#FED7DC]',
   'bg-[#FDB0C0]',
+  'bg-[#FD8595]',
   'bg-[#FC507D]',
 ]
 
@@ -40,7 +42,7 @@ const monthWidth: Record<string, string> = {
   28: 'w-28',
 }
 
-const steps = [1, 5, 9, 14]
+const steps = [0, 1, 4, 8, 12, 16]
 
 function getStepIndex(diff: number) {
   let stepIndex = 0

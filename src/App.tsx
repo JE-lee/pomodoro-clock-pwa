@@ -20,7 +20,7 @@ function App() {
     }
   }
 
-  const onSubmitClick = () => {
+  const onSubmit = () => {
     if (!formRef.current)
       return
     const formData = new FormData(formRef.current)
@@ -29,7 +29,6 @@ function App() {
     updateClockSetting(data)
   }
 
-  const settingVisible = clockState === STATE.BEFORE_RUN || clockState === STATE.PAUSED
   const bgApp = (clockState === STATE.BEFORE_BREAK || clockState === STATE.BREAKING) ? 'bg-app-peace' : 'bg-app'
 
   const main = (
@@ -37,8 +36,7 @@ function App() {
       <PomodoroClock clockState={clockState} setClockState={setClockState}></PomodoroClock>
       <div className="fixed flex items-center bottom-5 right-5">
         {
-          settingVisible
-          && <>
+          <>
             <div className="hidden drawer drawer-bottom sm:block">
               <input id="heatmap-drawer" type="checkbox" className="drawer-toggle" />
               <div className="drawer-content">
@@ -63,15 +61,15 @@ function App() {
       </div>
 
       <dialog id="settingModal" className="modal">
-        <form ref={formRef} method="dialog" className="modal-box w-80">
+        <form ref={formRef} method="dialog" className="modal-box w-80" onSubmit={onSubmit}>
           <button className="absolute btn btn-sm btn-circle btn-ghost right-4 top-4">✕</button>
           <h3 className="text-lg font-bold">SETTING</h3>
 
           <div className="w-full max-w-xs form-control">
             <label className="label">
-              <span className="label-text">Session time</span>
+              <span className="label-text">Session time / minutes</span>
             </label>
-            <input name="sessionTime" type="number" step={0.01} defaultValue={clockSetting.sessionTime} placeholder="Type here" className="w-full max-w-xs input input-reset input-sm input-bordered" />
+            <input name="sessionTime" step={0.1} type="number" defaultValue={clockSetting.sessionTime} placeholder="Type here" className="w-full max-w-xs input input-reset input-sm input-bordered" />
           </div>
 
           <div className="w-full max-w-xs form-control">
@@ -83,9 +81,9 @@ function App() {
 
           <div className="w-full max-w-xs form-control">
             <label className="label">
-              <span className="label-text">Break time</span>
+              <span className="label-text">Break time / minutes</span>
             </label>
-            <input name="breakTime" step={0.01} defaultValue={clockSetting.breakTime} type="number" placeholder="Type here" className="w-full max-w-xs input input-reset input-sm input-bordered " />
+            <input name="breakTime" step={0.1} defaultValue={clockSetting.breakTime} type="number" placeholder="Type here" className="w-full max-w-xs input input-reset input-sm input-bordered " />
           </div>
 
           <div className="w-full max-w-xs form-control">
@@ -103,7 +101,7 @@ function App() {
           </div>
 
           <div className="modal-action">
-            <button className="btn btn-sm text-white bg-[#FC5E7B]" onClick={onSubmitClick}>submit</button>
+            <button className="btn btn-sm text-white bg-[#FC5E7B]">submit</button>
           </div>
         </form>
       </dialog>

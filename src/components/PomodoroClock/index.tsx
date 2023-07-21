@@ -30,7 +30,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
 
   useEffect(() => {
     if (props.clockState === STATE.BEFORE_RUN) {
-      setRestSeconds(sessionTime * 60)
+      setRestSeconds(Math.round(sessionTime * 60))
     }
     else if (props.clockState === STATE.RUNNING) {
       // start session
@@ -49,17 +49,17 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
             expectedTime: sessionTime * 60,
           }).then(refreshHeatMap)
 
-          // notify session end
-          await confirm(breakHints)
-          props.setClockState(STATE.BREAKING)
           // make sure window is frontground
           // it works on PWA
           !silent && window.focus()
+          // notify session end
+          await confirm(breakHints)
+          props.setClockState(STATE.BREAKING)
         }),
       )
     }
     else if (props.clockState === STATE.BEFORE_BREAK) {
-      setRestSeconds(breakTime * 60)
+      setRestSeconds(Math.round(breakTime * 60))
     }
     else if (props.clockState === STATE.BREAKING) {
       threadStartTimestamp.current = Date.now()
@@ -68,7 +68,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
         seconds => setRestSeconds(seconds),
         noThrow(async () => {
           setBreakRound(breakRound + 1)
-          setRestSeconds(sessionTime * 60)
+          setRestSeconds(Math.round(sessionTime * 60))
           props.setClockState(STATE.BEFORE_RUN)
           // save db
           addThread({
@@ -77,12 +77,12 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
             endTimestamp: Date.now(),
             expectedTime: breakTime * 60,
           }).then(refreshHeatMap)
-          // notify break end
-          await confirm(sessionHints)
-          props.setClockState(STATE.RUNNING)
           // make sure window is frontground
           // it works on PWA
           !silent && window.focus()
+          // notify break end
+          await confirm(sessionHints)
+          props.setClockState(STATE.RUNNING)
         }),
       )
     }
@@ -98,11 +98,13 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
   }, [controlsVisible])
 
   const onSesionTimeChange = useCallback((value: number) => {
+    value = +value.toFixed(1)
     updateSetting?.({ sessionTime: value })
-    setRestSeconds(value * 60)
+    setRestSeconds(Math.round(value * 60))
   }, [])
 
   const onBreakTimeChange = useCallback((value: number) => {
+    value = +value.toFixed(1)
     updateSetting?.({ breakTime: value })
   }, [])
 
@@ -112,7 +114,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
       showNotiPermissionModal()
 
     closeNotification()
-    restart && setRestSeconds(sessionTime * 60)
+    restart && setRestSeconds(Math.round(sessionTime * 60))
     props.setClockState(STATE.RUNNING)
   }
 
@@ -120,8 +122,8 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
 
   // restart current session
   const onResetClick = () => {
-    setRestSeconds(sessionTime * 60)
-    props.setClockState(STATE.RUNNING)
+    setRestSeconds(Math.round(sessionTime * 60))
+    props.setClockState(STATE.BEFORE_RUN)
     // save db
     addThread({
       type: ThreadType.SESSION,
@@ -138,7 +140,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
 
   const doSkipBreak = () => {
     closeNotification()
-    setRestSeconds(sessionTime * 60)
+    setRestSeconds(Math.round(sessionTime * 60))
     props.setClockState(STATE.RUNNING)
     // save db
     addThread({
