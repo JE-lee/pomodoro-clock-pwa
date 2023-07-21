@@ -3,7 +3,7 @@ import type { FC } from 'react'
 import { formatMinAndSec, isEqualDate, noThrow } from '../../shared'
 import { STATE, ThreadType } from '../../type'
 import { PauseIcon, PlayIcon, ResetIcon, SkipIcon } from '../SvgIcon'
-import { ClockContext, HeatMapContext, addThread, useCountdown, useNotification } from '../../service'
+import { ClockContext, HeatMapContext, addThread, getThreadsOfDay, useCountdown, useNotification } from '../../service'
 import NumberInput from '../NumberInput'
 import Flip from '../Flip'
 import { useFade } from '../../hooks'
@@ -31,6 +31,16 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
 
   const { confirm, closeNotification } = useNotification()
   const { countdownTime } = useCountdown()
+
+  // query rounds of session and break
+  useEffect(() => {
+    getThreadsOfDay(new Date()).then((threads) => {
+      const sessions = threads.filter(t => t.type === ThreadType.SESSION)
+      const breakds = threads.filter(t => t.type === ThreadType.BREAK)
+      setSessionRound(sessions.length + 1)
+      setBreakRound(breakds.length + 1)
+    })
+  }, [])
 
   useEffect(() => {
     if (props.clockState === STATE.BEFORE_RUN) {

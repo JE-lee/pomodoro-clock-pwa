@@ -3,13 +3,14 @@ import { ThreadType } from '../type'
 import type { DataOfDay, IThread } from '../type'
 import { getDateRaw } from '../shared'
 
+const START_TIMESTAMP = 'startTimestamp'
 class ThreadDatabase extends Dexie {
   threads: Dexie.Table<IThread, number>
 
   constructor() {
     super('ThreadDatabase')
     this.version(3).stores({
-      threads: '++id, startTimestamp',
+      threads: `++id, ${START_TIMESTAMP}`,
     })
     this.threads = this.table('threads')
   }
@@ -33,7 +34,7 @@ export function clearThread() {
 export async function getThreadDataOfLastYear(): Promise<DataOfDay[]> {
   const db = getThreadDb()
   // 查询近一年的数据
-  const threads = await db.threads.where('startTimestamp').above(Date.now() - 365 * 24 * 60 * 60 * 1000).sortBy('startTimestamp')
+  const threads = await db.threads.where(START_TIMESTAMP).above(Date.now() - 365 * 24 * 60 * 60 * 1000).sortBy(START_TIMESTAMP)
   const heatMapData: Record<string, DataOfDay> = {}
   threads.forEach((thread) => {
     const date = getDateRaw(thread.startTimestamp)
@@ -47,4 +48,12 @@ export async function getThreadDataOfLastYear(): Promise<DataOfDay[]> {
   })
 
   return Object.values(heatMapData)
+}
+
+export async function getThreadsOfDay(date: Date, type?: ThreadType) {
+  const db = getThreadDb()
+  const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+  const dayEnd = dayStart + 24 * 60 * 60 * 1000
+  const threads = await db.threads.where(START_TIMESTAMP).between(dayStart, dayEnd).sortBy(START_TIMESTAMP)
+  return threads.filter(thread => type === undefined || thread.type === type)
 }
