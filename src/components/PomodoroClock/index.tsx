@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { FC } from 'react'
-import { formatMinAndSec, noThrow } from '../../shared'
+import { formatMinAndSec, isEqualDate, noThrow } from '../../shared'
 import { STATE, ThreadType } from '../../type'
 import { PauseIcon, PlayIcon, ResetIcon, SkipIcon } from '../SvgIcon'
 import { ClockContext, HeatMapContext, addThread, useCountdown, useNotification } from '../../service'
@@ -19,10 +19,14 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
   const [sessionRound, setSessionRound] = useState(1)
   const [breakRound, setBreakRound] = useState(1)
   const [restSeconds, setRestSeconds] = useState(sessionTime * 60)
-  const [clockFlip, setClockFlip] = useState(false)
+  const [clockFlipTrigger, setClockFlipTrigger] = useState(false)
   const shouldShowNotiPermissionModal = useRef(true)
+  const inSession = isInSession(props.clockState)
+  const currentDate = useRef<Date>()
+  if (!currentDate.current)
+    currentDate.current = new Date()
 
-  const { elRef: controlsRef, fadeIn, fadeOut } = useFade()
+  const { elRef: controlsRef, fadeIn: fadeControlsIn, fadeOut: fadeControlsOut } = useFade()
   const threadStartTimestamp = useRef(Date.now())
 
   const { confirm, closeNotification } = useNotification()
@@ -34,7 +38,6 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
     }
     else if (props.clockState === STATE.RUNNING) {
       // start session
-      threadStartTimestamp.current = Date.now()
       return countdownTime(
         restSeconds,
         seconds => setRestSeconds(seconds),
@@ -48,7 +51,6 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
             endTimestamp: Date.now(),
             expectedTime: sessionTime * 60,
           }).then(refreshHeatMap)
-
           // make sure window is frontground
           // it works on PWA
           !silent && window.focus()
@@ -62,9 +64,8 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
       setRestSeconds(Math.round(breakTime * 60))
     }
     else if (props.clockState === STATE.BREAKING) {
-      threadStartTimestamp.current = Date.now()
       return countdownTime(
-        breakTime * 60,
+        restSeconds,
         seconds => setRestSeconds(seconds),
         noThrow(async () => {
           setBreakRound(breakRound + 1)
@@ -86,16 +87,17 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
         }),
       )
     }
-  }, [props.clockState, sessionTime, breakTime])
+  }, [props.clockState, sessionTime, breakTime, sessionRound, breakRound, silent, sessionHints, breakHints])
 
-  const controlsVisible = !isInSession(props.clockState)
   useLayoutEffect(() => {
-    setClockFlip(!clockFlip)
-    if (controlsVisible)
-      fadeIn(800)
+    if (inSession)
+      fadeControlsOut(400)
     else
-      fadeOut(400)
-  }, [controlsVisible])
+      fadeControlsIn(800)
+
+    // must be called after fadeControlsOut/In
+    setClockFlipTrigger(!clockFlipTrigger)
+  }, [inSession])
 
   const onSesionTimeChange = useCallback((value: number) => {
     value = +value.toFixed(1)
@@ -108,13 +110,21 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
     updateSetting?.({ breakTime: value })
   }, [])
 
-  const doStartSession = async (restart = true) => {
+  const doStartSession = async (fresh = true) => {
     // request notification permission
     if (Notification.permission !== 'granted')
       showNotiPermissionModal()
 
+    maybeResetRounds()
+
     closeNotification()
-    restart && setRestSeconds(Math.round(sessionTime * 60))
+
+    const ifAnotherDay = !isEqualDate(currentDate.current!, new Date())
+    if (ifAnotherDay || fresh) {
+      threadStartTimestamp.current = Date.now()
+      setRestSeconds(Math.round(sessionTime * 60))
+    }
+
     props.setClockState(STATE.RUNNING)
   }
 
@@ -122,6 +132,8 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
 
   // restart current session
   const onResetClick = () => {
+    maybeResetRounds()
+
     setRestSeconds(Math.round(sessionTime * 60))
     props.setClockState(STATE.BEFORE_RUN)
     // save db
@@ -134,11 +146,15 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
   }
 
   const doStartBreak = () => {
+    maybeResetRounds()
+
     closeNotification()
+    threadStartTimestamp.current = Date.now()
     props.setClockState(STATE.BREAKING)
   }
 
   const doSkipBreak = () => {
+    maybeResetRounds()
     closeNotification()
     setRestSeconds(Math.round(sessionTime * 60))
     props.setClockState(STATE.RUNNING)
@@ -162,14 +178,22 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
     }
   }
 
-  const inSession = isInSession(props.clockState)
+  function maybeResetRounds() {
+    const ifAnotherDay = !isEqualDate(currentDate.current!, new Date())
+    if (ifAnotherDay) {
+      currentDate.current = new Date()
+      setSessionRound(1)
+      setBreakRound(1)
+    }
+  }
+
   let stateText = inSession ? `Session ${sessionRound}` : 'Ready?'
   if (props.clockState === STATE.BEFORE_BREAK || props.clockState === STATE.BREAKING)
     stateText = inSession ? `Break ${breakRound}` : 'Resting'
 
   return (
     <div className="flex flex-col items-center select-none">
-      <Flip trigger={clockFlip}>
+      <Flip trigger={clockFlipTrigger}>
         <div className="w-[55vmin] min-w-[360px] aspect-square min-h-[360px]
             flex flex-col justify-center items-center bg-pomodoro bg-center bg-no-repeat bg-contain text-xs sm:text-sm xl:text-base 2xl:text-lg">
           <div className="text-[2.2em] leading-tight text-[#FD7477]">{stateText}</div>
