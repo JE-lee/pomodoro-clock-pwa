@@ -10,7 +10,14 @@ module.exports = {
   ],
   runtimeCaching: [
     {
-      urlPattern: /\.(?:html|css|js|png|gif)$/,
+      urlPattern: /\.html$/,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'entry',
+      },
+    },
+    {
+      urlPattern: /\.(?:css|js|png|gif)$/,
       handler: 'StaleWhileRevalidate',
       options: {
         cacheName: 'all',

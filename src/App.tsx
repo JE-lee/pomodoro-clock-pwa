@@ -2,9 +2,9 @@ import { useRef, useState } from 'react'
 import PomodoroClock from './components/PomodoroClock'
 import { STATE } from './type'
 import { HeatMapIcon, SettingIcon } from './components/SvgIcon'
-import { formDataToObject } from './shared'
 import { ClockContext, HeatMapContext, useClockSetting, useHeatMap } from './service'
 import HeatMap from './components/HeatMap'
+import { formDataToObject } from './shared'
 
 function App() {
   const [clockState, setClockState] = useState(STATE.BEFORE_RUN)
