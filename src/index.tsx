@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import './index.scss'
 import * as Sentry from '@sentry/react'
+import { Workbox } from 'workbox-window'
 import App from './App'
 import reportWebVitals from './reportWebVitals'
 
@@ -20,6 +21,28 @@ Sentry.init({
   replaysSessionSampleRate: 0.1, // This sets the sample rate at 10%. You may want to change it to 100% while in development and then sample at a lower rate in production.
   replaysOnErrorSampleRate: 1.0, // If you're not already sampling the entire session, change the sample rate to 100% when sampling sessions where errors occur.
 })
+
+if (process.env.NODE_ENV === 'production') {
+  if ('serviceWorker' in navigator) {
+    const wb = new Workbox('/sw.js')
+
+    // Add an event listener to detect when the registered
+    // service worker has installed but is waiting to activate.
+    wb.addEventListener('waiting', () => {
+      wb.messageSkipWaiting()
+    })
+
+    wb.addEventListener('controlling', () => {
+      // At this point, reloading will ensure that the current
+      // tab is loaded under the control of the new service worker.
+      // Depending on your web app, you may want to auto-save or
+      // persist transient state before triggering the reload.
+      window.location.reload()
+    })
+
+    wb.register()
+  }
+}
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement,
