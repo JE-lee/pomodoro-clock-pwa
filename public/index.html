@@ -29,7 +29,7 @@
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
-    {% if process.env.NODE_ENV === 'production' %}
+    <% if (process.env.NODE_ENV === 'production') { %>
       <script>
         (function(){
           if ('serviceWorker' in navigator) {
@@ -37,7 +37,7 @@
           }
         })()
       </script>
-    {% endif %}
+    <% } %>
     
     <!--
       This HTML file is a template.
@@ -50,13 +50,16 @@
       To create a production bundle, use `npm run build` or `yarn build`.
     -->
     <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-GXQTJQ1GTC"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() { dataLayer.push(arguments); }
-      gtag('js', new Date());
+    <% if (process.env.NODE_ENV === 'production') { %>
+      <script async src="https://www.googletagmanager.com/gtag/js?id=G-GXQTJQ1GTC"></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
 
-      gtag('config', 'G-GXQTJQ1GTC');
-    </script>
+        gtag('config', 'G-GXQTJQ1GTC');
+      </script>
+    <% } %>
+    
   </body>
 </html>
