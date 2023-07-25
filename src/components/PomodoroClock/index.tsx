@@ -61,11 +61,11 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
             endTimestamp: Date.now(),
             expectedTime: sessionTime * 60,
           }).then(refreshHeatMap)
+          // notify session end
+          await confirm(breakHints, './break.png')
           // make sure window is frontground
           // it works on PWA
           !silent && window.focus()
-          // notify session end
-          await confirm(breakHints, './break.png')
           props.setClockState(STATE.BREAKING)
         }),
       )
@@ -88,11 +88,11 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
             endTimestamp: Date.now(),
             expectedTime: breakTime * 60,
           }).then(refreshHeatMap)
+          // notify break end
+          await confirm(sessionHints, './work.png')
           // make sure window is frontground
           // it works on PWA
           !silent && window.focus()
-          // notify break end
-          await confirm(sessionHints, './work.png')
           props.setClockState(STATE.RUNNING)
         }),
       )
@@ -125,7 +125,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
     if (Notification.permission !== 'granted')
       showNotiPermissionModal()
 
-    maybeResetRounds()
+    maybeResetContext()
 
     closeNotification()
 
@@ -142,7 +142,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
 
   // restart current session
   const onResetClick = () => {
-    maybeResetRounds()
+    maybeResetContext()
 
     setRestSeconds(Math.round(sessionTime * 60))
     props.setClockState(STATE.BEFORE_RUN)
@@ -156,7 +156,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
   }
 
   const doStartBreak = () => {
-    maybeResetRounds()
+    maybeResetContext()
 
     closeNotification()
     threadStartTimestamp.current = Date.now()
@@ -164,7 +164,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
   }
 
   const doSkipBreak = () => {
-    maybeResetRounds()
+    maybeResetContext()
     closeNotification()
     setRestSeconds(Math.round(sessionTime * 60))
     props.setClockState(STATE.RUNNING)
@@ -188,12 +188,13 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
     }
   }
 
-  function maybeResetRounds() {
+  function maybeResetContext() {
     const ifAnotherDay = !isEqualDate(currentDate.current!, new Date())
     if (ifAnotherDay) {
       currentDate.current = new Date()
       setSessionRound(1)
       setBreakRound(1)
+      refreshHeatMap()
     }
   }
 
