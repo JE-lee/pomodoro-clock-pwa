@@ -2,6 +2,18 @@
   "name": "tomato-clock-pwa",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=17.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build && workbox generateSW workbox-config.js",
+    "build:vercel": "npm run build && npm run sentry:sourcemaps",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org maurice-rk --project pomodoro-clock-pwa ./build && sentry-cli sourcemaps upload --org maurice-rk --project pomodoro-clock-pwa ./build"
+  },
   "dependencies": {
     "@sentry/react": "^7.60.0",
     "@testing-library/jest-dom": "^5.16.5",
@@ -15,18 +27,21 @@
     "dexie-react-hooks": "^1.1.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-flip-toolkit": "^7.2.4",
     "react-scripts": "5.0.1",
+    "tailwind-merge": "^2.4.0",
     "typescript": "^4.9.5",
     "web-vitals": "^2.1.4",
     "workbox-window": "^7.0.0"
   },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build && workbox generateSW workbox-config.js",
-    "build:vercel": "npm run build && npm run sentry:sourcemaps",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org maurice-rk --project pomodoro-clock-pwa ./build && sentry-cli sourcemaps upload --org maurice-rk --project pomodoro-clock-pwa ./build"
+  "devDependencies": {
+    "@antfu/eslint-config-ts": "^0.39.6",
+    "@sentry/cli": "^2.19.4",
+    "@types/testing-library__jest-dom": "^5.14.6",
+    "daisyui": "^3.2.1",
+    "sass": "^1.63.6",
+    "tailwindcss": "^3.3.2",
+    "workbox-cli": "^7.0.0"
   },
   "eslintConfig": {
     "extends": [
@@ -57,18 +72,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "devDependencies": {
-    "@antfu/eslint-config-ts": "^0.39.6",
-    "@sentry/cli": "^2.19.4",
-    "@types/testing-library__jest-dom": "^5.14.6",
-    "daisyui": "^3.2.1",
-    "sass": "^1.63.6",
-    "tailwindcss": "^3.3.2",
-    "workbox-cli": "^7.0.0"
-  },
-  "engines": {
-    "node": ">=17.0.0",
-    "pnpm": ">=8.0.0"
   }
 }
