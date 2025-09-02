@@ -1,5 +1,5 @@
-import { createContext, useEffect, useReducer, useState } from 'react'
 import type { DataOfDay, HeatMapItem, IClockContext, IHeatMapContext } from '../type'
+import { createContext, useEffect, useReducer, useState } from 'react'
 import { formatHumanReadableDate, getDateRaw } from '../shared'
 import { getThreadDataOfLastYear } from './db'
 
@@ -27,7 +27,7 @@ export function getClockContext(): IClockContext {
   return defaultClockContext
 }
 
-function clockSettingReducer(state: IClockContext, action: { type: string; payload: Partial<IClockContext> }): IClockContext {
+function clockSettingReducer(state: IClockContext, action: { type: string, payload: Partial<IClockContext> }): IClockContext {
   if (action.type === 'update') {
     if (action.payload.sessionTime)
       action.payload.sessionTime = Number(action.payload.sessionTime) || defaultClockContext.sessionTime

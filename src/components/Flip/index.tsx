@@ -1,7 +1,8 @@
-import { type FC, useLayoutEffect, useRef } from 'react'
+import type { FC } from 'react'
 import type { ELementRect } from '../../type'
-import { isEqualRect } from '../../shared'
+import { useLayoutEffect, useRef } from 'react'
 import { useWindowResize } from '../../hooks'
+import { isEqualRect } from '../../shared'
 
 interface FlipProps {
   children: React.ReactNode

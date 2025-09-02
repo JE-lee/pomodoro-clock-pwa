@@ -1,7 +1,7 @@
-import Dexie from 'dexie'
-import { ThreadType } from '../type'
 import type { DataOfDay, IThread } from '../type'
+import Dexie from 'dexie'
 import { getDateRaw } from '../shared'
+import { ThreadType } from '../type'
 
 const START_TIMESTAMP = 'startTimestamp'
 class ThreadDatabase extends Dexie {

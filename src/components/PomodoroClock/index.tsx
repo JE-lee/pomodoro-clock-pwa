@@ -1,12 +1,12 @@
-import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { FC } from 'react'
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Flipped, Flipper } from 'react-flip-toolkit'
 import { twMerge } from 'tailwind-merge'
+import { addThread, ClockContext, getThreadsOfDay, HeatMapContext, useCountdown, useNotification } from '../../service'
 import { formatMinAndSec, isEqualDate, noThrow } from '../../shared'
 import { STATE, ThreadType } from '../../type'
-import { PauseIcon, PlayIcon, ResetIcon, SkipIcon } from '../SvgIcon'
-import { ClockContext, HeatMapContext, addThread, getThreadsOfDay, useCountdown, useNotification } from '../../service'
 import NumberInput from '../NumberInput'
+import { PauseIcon, PlayIcon, ResetIcon, SkipIcon } from '../SvgIcon'
 
 interface PomodoroClockProps {
   clockState: STATE
@@ -276,40 +276,44 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
         >
           {!inSession && (
             <div ref={controlsRef} className={twMerge('flex items-center mt-8')}>
-              <NumberInput label="SESSION" value={sessionTime} onChange={onSesionTimeChange} min={0}></NumberInput>
+              <NumberInput label="SESSION" value={sessionTime} onChange={onSesionTimeChange} min={0} />
               <NumberInput
                 label="BREAK"
                 className="ml-5"
                 value={breakTime}
                 onChange={onBreakTimeChange}
                 min={0}
-              ></NumberInput>
+              />
             </div>
           )}
         </Flipped>
-        {
-          <dialog id="notiPermissionModal" className="modal">
-            <form method="dialog" className="modal-box">
-              <button className="absolute btn btn-sm btn-circle btn-ghost right-2 top-2">x</button>
-              <h3 className="text-lg font-bold">Hello</h3>
-              <p className="py-2">
-                {'The app requires you to authorize your browser\'s notification permissions for an optimal experience!'}
-              </p>
-              <p className="py-2">
+        <dialog id="notiPermissionModal" className="modal">
+          <form method="dialog" className="modal-box">
+            <button className="absolute btn btn-sm btn-circle btn-ghost right-2 top-2">x</button>
+            <h3 className="text-lg font-bold">Hello</h3>
+            <p className="py-2">
+              {'The app requires you to authorize your browser\'s notification permissions for an optimal experience!'}
+            </p>
+            <p className="py-2">
               Please click the button in the upper left corner of your browser to re-authorize, or check out
-              &nbsp;<a className="link" href="https://support.google.com/chrome/answer/3220216?hl=en&co=GENIE.Platform%3DDesktop" target="_blank" rel="noreferrer">this page</a> for help.
-              &nbsp;if you are using mac, look at  <a className="link" target="_blank" href="https://support.apple.com/en-hk/guide/safari/sfri40734/mac" rel="noreferrer">this website</a> for help.
-              </p>
-              <div className="modal-action">
+              &nbsp;
+              <a className="link" href="https://support.google.com/chrome/answer/3220216?hl=en&co=GENIE.Platform%3DDesktop" target="_blank" rel="noreferrer">this page</a>
+              {' '}
+              for help.
+              &nbsp;if you are using mac, look at
+              <a className="link" target="_blank" href="https://support.apple.com/en-hk/guide/safari/sfri40734/mac" rel="noreferrer">this website</a>
+              {' '}
+              for help.
+            </p>
+            <div className="modal-action">
               { Notification.permission === 'default' && <button className="btn btn-md text-white bg-[#FC5E7B]" onClick={() => Notification.requestPermission()}>AUTHORIZE</button>}
               <button className="btn btn-md" onClick={() => (shouldShowNotiPermissionModal.current = false)}>No more reminders</button>
-              </div>
-            </form>
-            <form method="dialog" className="modal-backdrop">
-              <button>close</button>
-            </form>
-          </dialog>
-        }
+            </div>
+          </form>
+          <form method="dialog" className="modal-backdrop">
+            <button>close</button>
+          </form>
+        </dialog>
       </div>
     </Flipper>
   )

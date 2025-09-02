@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react'
+import HeatMap from './components/HeatMap'
 import PomodoroClock from './components/PomodoroClock'
-import { STATE } from './type'
 import { HeatMapIcon, SettingIcon } from './components/SvgIcon'
 import { ClockContext, HeatMapContext, useClockSetting, useHeatMap } from './service'
-import HeatMap from './components/HeatMap'
 import { formDataToObject } from './shared'
+import { STATE } from './type'
 
 function App() {
   const [clockState, setClockState] = useState(STATE.BEFORE_RUN)
@@ -35,29 +35,27 @@ function App() {
     <div className={`flex flex-col items-center justify-center w-full h-screen ${bgApp}`}>
       <PomodoroClock clockState={clockState} setClockState={setClockState}></PomodoroClock>
       <div className="fixed flex items-center bottom-5 right-5">
-        {
-          <>
-            <div className="hidden drawer drawer-bottom sm:block">
-              <input id="heatmap-drawer" type="checkbox" className="drawer-toggle" />
-              <div className="drawer-content">
-                <label htmlFor="heatmap-drawer" className="drawer-button">
-                  <div className="block w-6 flex-shrink-0  text-[#FD7477] hover:text-[#FC5E7B] transition duration-500 cursor-pointer">
-                    <HeatMapIcon></HeatMapIcon>
-                  </div>
-                </label>
-              </div>
-              <div className="drawer-side">
-                <label htmlFor="heatmap-drawer" className="drawer-overlay"></label>
-                <div className="absolute bottom-0 w-screen px-4 py-8 overflow-x-auto border rounded 100vw bg-base-200">
-                  <HeatMap className="mx-auto w-220" data={heatMapData}></HeatMap>
+        <>
+          <div className="hidden drawer drawer-bottom sm:block">
+            <input id="heatmap-drawer" type="checkbox" className="drawer-toggle" />
+            <div className="drawer-content">
+              <label htmlFor="heatmap-drawer" className="drawer-button">
+                <div className="block w-6 flex-shrink-0  text-[#FD7477] hover:text-[#FC5E7B] transition duration-500 cursor-pointer">
+                  <HeatMapIcon></HeatMapIcon>
                 </div>
+              </label>
+            </div>
+            <div className="drawer-side">
+              <label htmlFor="heatmap-drawer" className="drawer-overlay"></label>
+              <div className="absolute bottom-0 w-screen px-4 py-8 overflow-x-auto border rounded 100vw bg-base-200">
+                <HeatMap className="mx-auto w-220" data={heatMapData}></HeatMap>
               </div>
             </div>
-            <button className="w-6 ml-2 flex-shrink-0  text-[#FD7477] hover:text-[#FC5E7B] transition duration-500 cursor-pointer" onClick={onSettingClick}>
-              <SettingIcon></SettingIcon>
-            </button>
-          </>
-        }
+          </div>
+          <button className="w-6 ml-2 flex-shrink-0  text-[#FD7477] hover:text-[#FC5E7B] transition duration-500 cursor-pointer" onClick={onSettingClick}>
+            <SettingIcon></SettingIcon>
+          </button>
+        </>
       </div>
 
       <dialog id="settingModal" className="modal">

@@ -12,9 +12,12 @@
     "build:vercel": "npm run build && npm run sentry:sourcemaps",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org maurice-rk --project pomodoro-clock-pwa ./build && sentry-cli sourcemaps upload --org maurice-rk --project pomodoro-clock-pwa ./build"
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org maurice-rk --project pomodoro-clock-pwa ./build && sentry-cli sourcemaps upload --org maurice-rk --project pomodoro-clock-pwa ./build",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix"
   },
   "dependencies": {
+    "@antfu/eslint-config": "^2.27.3",
     "@sentry/react": "^7.60.0",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.4.0",
@@ -25,6 +28,7 @@
     "@types/react-dom": "^18.2.6",
     "dexie": "^3.2.4",
     "dexie-react-hooks": "^1.1.6",
+    "eslint": "^8.57.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-flip-toolkit": "^7.2.4",
@@ -35,31 +39,17 @@
     "workbox-window": "^7.0.0"
   },
   "devDependencies": {
-    "@antfu/eslint-config-ts": "^0.39.6",
+    "@eslint-react/eslint-plugin": "^1.52.9",
     "@sentry/cli": "^2.19.4",
     "@types/testing-library__jest-dom": "^5.14.6",
     "daisyui": "^3.2.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^16.3.0",
     "sass": "^1.63.6",
     "tailwindcss": "^3.3.2",
     "workbox-cli": "^7.0.0"
-  },
-  "eslintConfig": {
-    "extends": [
-      "@antfu/eslint-config-ts",
-      "plugin:react-hooks/recommended",
-      "plugin:react/recommended"
-    ],
-    "rules": {
-      "jsx-quotes": [
-        "error",
-        "prefer-double"
-      ],
-      "react/react-in-jsx-scope": "off",
-      "no-debugger": "off",
-      "no-restricted-syntax": "off",
-      "no-console": "off",
-      "no-new": "off"
-    }
   },
   "browserslist": {
     "production": [

@@ -37,5 +37,5 @@ export function useCountdown() {
 }
 
 interface OnDoneCallback {
-  (ctx: { startTimestamp: number; duration: number }): void
+  (ctx: { startTimestamp: number, duration: number }): void
 }

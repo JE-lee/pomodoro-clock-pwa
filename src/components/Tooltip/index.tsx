@@ -1,4 +1,5 @@
-import { type FC, useCallback, useLayoutEffect, useRef, useState } from 'react'
+import type { FC } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 
 interface TooltipProps {
   children?: React.ReactNode
@@ -28,13 +29,19 @@ const Tooltip: FC<TooltipProps> = (props) => {
   const onMouseLeave = useCallback(() => setVisible(false), [])
 
   return (
-    <div className={`${props.className} tooltip  ${visible && 'tooltip-open'} before:hidden ${!visible && 'after:hidden'} after:bottom-[0.88rem]`}
-      onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} data-tip>
+    <div
+      className={`${props.className} tooltip  ${visible && 'tooltip-open'} before:hidden ${!visible && 'after:hidden'} after:bottom-[0.88rem]`}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      data-tip
+    >
       {
         visible
-        && <div ref={tooltipContentRef} className="absolute left-half translate-x-nhalf translate bottom-[1.25rem] rounded-[0.25rem] bg-ttc text-ttct p-1">
-          {props.tooltip}
-        </div>
+        && (
+          <div ref={tooltipContentRef} className="absolute left-half translate-x-nhalf translate bottom-[1.25rem] rounded-[0.25rem] bg-ttc text-ttct p-1">
+            {props.tooltip}
+          </div>
+        )
       }
       {props.children}
     </div>

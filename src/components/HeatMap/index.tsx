@@ -1,4 +1,4 @@
-import { type FC } from 'react'
+import type { FC } from 'react'
 import type { HeatMapData, HeatMapItem } from '../../type'
 import Tooltip from '../Tooltip'
 
@@ -62,10 +62,14 @@ const HeatMap: FC<HeatMapProps> = (props) => {
     for (let i = 0; i < row.length; i++) {
       const { value, tooltip } = row[i] || {}
       const tooltipContent = <span className="break-keep whitespace-nowrap">{tooltip}</span>
-      rDots.push(<Tooltip key={i}
-        className={`w-3 h-3 flex-shrink-0 mr-1 mt-1 rounded-sm border border-solid border-gray-200 ${colors[getStepIndex(value)]} ${!row[i] && 'invisible'}`}
-        tooltip={tooltipContent}>
-      </Tooltip>)
+      rDots.push(
+        <Tooltip
+          key={i}
+          className={`w-3 h-3 flex-shrink-0 mr-1 mt-1 rounded-sm border border-solid border-gray-200 ${colors[getStepIndex(value)]} ${!row[i] && 'invisible'}`}
+          tooltip={tooltipContent}
+        >
+        </Tooltip>,
+      )
     }
 
     return (

@@ -1,10 +1,10 @@
+import * as Sentry from '@sentry/react'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import './index.scss'
-import * as Sentry from '@sentry/react'
 import { Workbox } from 'workbox-window'
 import App from './App'
 import reportWebVitals from './reportWebVitals'
+import './index.scss'
 
 Sentry.init({
   dsn: 'https://9bfef45903984525958da0490a874e53@o4505571593617408.ingest.sentry.io/4505571634774016',
