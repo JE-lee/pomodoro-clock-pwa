@@ -40,62 +40,87 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
     })
   }, [])
 
+  // Constants for seconds calculations
+  const SESSION_SECONDS = Math.round(sessionTime * 60)
+  const BREAK_SECONDS = Math.round(breakTime * 60)
+
+  // Handle session completion
+  const handleSessionComplete = useCallback(async () => {
+    setSessionRound(prev => prev + 1)
+    props.setClockState(STATE.BEFORE_BREAK)
+    await saveSessionToDB()
+    await confirm(breakHints, './break.png')
+    props.setClockState(STATE.BREAKING)
+    /**
+      make sure window is frontground
+      it works on PWA mode
+    **/
+    if (!silent) window.focus()
+  }, [setSessionRound, breakHints, confirm, silent, props])
+
+  // Handle break completion
+  const handleBreakComplete = useCallback(async () => {
+    setBreakRound(prev => prev + 1)
+    props.setClockState(STATE.BEFORE_RUN)
+    await saveBreakToDB()
+    await confirm(sessionHints, './work.png')
+    props.setClockState(STATE.RUNNING)
+    if (!silent) window.focus()
+  }, [setBreakRound, sessionHints, confirm, silent, props])
+
+  // Save session to database
+  const saveSessionToDB = useCallback(async () => {
+    await addThread({
+      type: ThreadType.SESSION,
+      startTimestamp: threadStartTimestamp.current,
+      endTimestamp: Date.now(),
+      expectedTime: SESSION_SECONDS,
+    }).then(refreshHeatMap)
+  }, [SESSION_SECONDS, refreshHeatMap])
+
+  // Save break to database
+  const saveBreakToDB = useCallback(async () => {
+    await addThread({
+      type: ThreadType.BREAK,
+      startTimestamp: threadStartTimestamp.current,
+      endTimestamp: Date.now(),
+      expectedTime: BREAK_SECONDS,
+    }).then(refreshHeatMap)
+  }, [BREAK_SECONDS, refreshHeatMap])
+
+  // Create countdown timer
+  const createCountdown = useCallback((onComplete: () => Promise<void>) => 
+    countdownTime(restSeconds, setRestSeconds, noThrow(async () => await onComplete())),
+    [restSeconds, setRestSeconds, countdownTime])
+
+  // Main state machine
   useEffect(() => {
-    if (props.clockState === STATE.BEFORE_RUN) {
-      setRestSeconds(Math.round(sessionTime * 60))
+    switch (props.clockState) {
+      case STATE.BEFORE_RUN:
+        setRestSeconds(SESSION_SECONDS)
+        break
+        
+      case STATE.RUNNING:
+        console.log('Starting session countdown')
+        return createCountdown(handleSessionComplete)
+        
+      case STATE.BEFORE_BREAK:
+        console.log('Setting break time')
+        setRestSeconds(BREAK_SECONDS)
+        break
+        
+      case STATE.BREAKING:
+        console.log('Starting break countdown')
+        return createCountdown(handleBreakComplete)
     }
-    else if (props.clockState === STATE.RUNNING) {
-      // start session
-      return countdownTime(
-        restSeconds,
-        seconds => setRestSeconds(seconds),
-        noThrow(async () => {
-          setSessionRound(sessionRound + 1)
-          props.setClockState(STATE.BEFORE_BREAK)
-          // save db
-          addThread({
-            type: ThreadType.SESSION,
-            startTimestamp: threadStartTimestamp.current,
-            endTimestamp: Date.now(),
-            expectedTime: sessionTime * 60,
-          }).then(refreshHeatMap)
-          // notify session end
-          await confirm(breakHints, './break.png')
-          // make sure window is frontground
-          // it works on PWA
-          !silent && window.focus()
-          props.setClockState(STATE.BREAKING)
-        }),
-      )
-    }
-    else if (props.clockState === STATE.BEFORE_BREAK) {
-      setRestSeconds(Math.round(breakTime * 60))
-    }
-    else if (props.clockState === STATE.BREAKING) {
-      return countdownTime(
-        restSeconds,
-        seconds => setRestSeconds(seconds),
-        noThrow(async () => {
-          setBreakRound(breakRound + 1)
-          setRestSeconds(Math.round(sessionTime * 60))
-          props.setClockState(STATE.BEFORE_RUN)
-          // save db
-          addThread({
-            type: ThreadType.BREAK,
-            startTimestamp: threadStartTimestamp.current,
-            endTimestamp: Date.now(),
-            expectedTime: breakTime * 60,
-          }).then(refreshHeatMap)
-          // notify break end
-          await confirm(sessionHints, './work.png')
-          // make sure window is frontground
-          // it works on PWA
-          !silent && window.focus()
-          props.setClockState(STATE.RUNNING)
-        }),
-      )
-    }
-  }, [props.clockState, sessionTime, breakTime, sessionRound, breakRound, silent, sessionHints, breakHints])
+  }, [
+    props.clockState,
+    SESSION_SECONDS,
+    BREAK_SECONDS,
+    createCountdown,
+    handleSessionComplete,
+    handleBreakComplete,
+  ])
 
   useLayoutEffect(() => {
     if (!inSession && !controlsRect.current)
