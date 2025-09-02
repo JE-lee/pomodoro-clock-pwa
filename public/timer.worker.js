@@ -1,9 +1,12 @@
 let timer = null
 function countDownTime(seconds) {
+  // 创建一个本地变量，避免修改传入的参数
+  let remainingSeconds = seconds
   function tick() {
     timer = setTimeout(() => {
-      self.postMessage({ type: 'countdown:tick', payload: --seconds})
-      if (seconds === 0) {
+      remainingSeconds--
+      self.postMessage({ type: 'countdown:tick', payload: remainingSeconds})
+      if (remainingSeconds === 0) {
         self.postMessage({ type: 'countdown:done' })
         timer = null
         return

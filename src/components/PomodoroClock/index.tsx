@@ -2,11 +2,12 @@ import type { FC } from 'react'
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Flipped, Flipper } from 'react-flip-toolkit'
 import { twMerge } from 'tailwind-merge'
-import { addThread, ClockContext, getThreadsOfDay, HeatMapContext, useCountdown, useNotification } from '../../service'
+import { addThread, ClockContext, HeatMapContext, useCountdown, useNotification } from '../../service'
 import { formatMinAndSec, isEqualDate, noThrow } from '../../shared'
 import { STATE, ThreadType } from '../../type'
 import NumberInput from '../NumberInput'
 import { PauseIcon, PlayIcon, ResetIcon, SkipIcon } from '../SvgIcon'
+import { PomodoroStateMachine, StateMachineContext, StateMachineEvent } from '../../service/stateMachine'
 
 interface PomodoroClockProps {
   clockState: STATE
@@ -16,111 +17,178 @@ interface PomodoroClockProps {
 const PomodoroClock: FC<PomodoroClockProps> = (props) => {
   const { sessionTime, breakTime, sessionHints, breakHints, silent, update: updateSetting } = useContext(ClockContext)
   const { refresh: refreshHeatMap } = useContext(HeatMapContext)
-  const [sessionRound, setSessionRound] = useState(1)
-  const [breakRound, setBreakRound] = useState(1)
-  const [restSeconds, setRestSeconds] = useState(sessionTime * 60)
   const shouldShowNotiPermissionModal = useRef(true)
-  const inSession = isInSession(props.clockState)
   const currentDate = useRef<Date>(new Date())
   const controlsRef = useRef<HTMLDivElement>(null)
   const controlsRect = useRef<DOMRect>()
-
-  const threadStartTimestamp = useRef(Date.now())
+  const countdownCleanupRef = useRef<(() => void) | null>(null)
 
   const { confirm, closeNotification } = useNotification()
   const { countdownTime } = useCountdown()
 
-  // query rounds of session and break
-  useEffect(() => {
-    getThreadsOfDay(new Date()).then((threads) => {
-      const sessions = threads.filter(t => t.type === ThreadType.SESSION)
-      const breakds = threads.filter(t => t.type === ThreadType.BREAK)
-      setSessionRound(sessions.length + 1)
-      setBreakRound(breakds.length + 1)
-    })
-  }, [])
-
-  // Constants for seconds calculations
-  const SESSION_SECONDS = Math.round(sessionTime * 60)
-  const BREAK_SECONDS = Math.round(breakTime * 60)
-
-  // Handle session completion
-  const handleSessionComplete = useCallback(async () => {
-    setSessionRound(prev => prev + 1)
-    props.setClockState(STATE.BEFORE_BREAK)
-    await saveSessionToDB()
-    await confirm(breakHints, './break.png')
-    props.setClockState(STATE.BREAKING)
-    /**
-      make sure window is frontground
-      it works on PWA mode
-    **/
-    if (!silent) window.focus()
-  }, [setSessionRound, breakHints, confirm, silent, props])
-
-  // Handle break completion
-  const handleBreakComplete = useCallback(async () => {
-    setBreakRound(prev => prev + 1)
-    props.setClockState(STATE.BEFORE_RUN)
-    await saveBreakToDB()
-    await confirm(sessionHints, './work.png')
-    props.setClockState(STATE.RUNNING)
-    if (!silent) window.focus()
-  }, [setBreakRound, sessionHints, confirm, silent, props])
-
-  // Save session to database
-  const saveSessionToDB = useCallback(async () => {
-    await addThread({
-      type: ThreadType.SESSION,
-      startTimestamp: threadStartTimestamp.current,
-      endTimestamp: Date.now(),
-      expectedTime: SESSION_SECONDS,
-    }).then(refreshHeatMap)
-  }, [SESSION_SECONDS, refreshHeatMap])
-
-  // Save break to database
-  const saveBreakToDB = useCallback(async () => {
-    await addThread({
-      type: ThreadType.BREAK,
-      startTimestamp: threadStartTimestamp.current,
-      endTimestamp: Date.now(),
-      expectedTime: BREAK_SECONDS,
-    }).then(refreshHeatMap)
-  }, [BREAK_SECONDS, refreshHeatMap])
-
-  // Create countdown timer
-  const createCountdown = useCallback((onComplete: () => Promise<void>) => 
-    countdownTime(restSeconds, setRestSeconds, noThrow(async () => await onComplete())),
-    [restSeconds, setRestSeconds, countdownTime])
-
-  // Main state machine
-  useEffect(() => {
-    switch (props.clockState) {
-      case STATE.BEFORE_RUN:
-        setRestSeconds(SESSION_SECONDS)
-        break
-        
-      case STATE.RUNNING:
-        console.log('Starting session countdown')
-        return createCountdown(handleSessionComplete)
-        
-      case STATE.BEFORE_BREAK:
-        console.log('Setting break time')
-        setRestSeconds(BREAK_SECONDS)
-        break
-        
-      case STATE.BREAKING:
-        console.log('Starting break countdown')
-        return createCountdown(handleBreakComplete)
+  // 创建状态机实例
+  const stateMachineRef = useRef<PomodoroStateMachine | null>(null)
+  if (!stateMachineRef.current) {
+    const stateMachineContext: StateMachineContext = {
+      sessionTime,
+      breakTime,
+      sessionHints,
+      breakHints,
+      silent
     }
-  }, [
-    props.clockState,
-    SESSION_SECONDS,
-    BREAK_SECONDS,
-    createCountdown,
-    handleSessionComplete,
-    handleBreakComplete,
-  ])
+    stateMachineRef.current = new PomodoroStateMachine(props.clockState, stateMachineContext, refreshHeatMap)
+  }
+
+  // 更新状态机上下文
+  useEffect(() => {
+    const stateMachineContext: StateMachineContext = {
+      sessionTime,
+      breakTime,
+      sessionHints,
+      breakHints,
+      silent
+    }
+    stateMachineRef.current?.updateContext(stateMachineContext)
+  }, [sessionTime, breakTime, sessionHints, breakHints, silent])
+
+  // 获取状态机当前状态
+  const machineState = stateMachineRef.current?.getCurrentState() || {
+    currentState: props.clockState,
+    restSeconds: sessionTime * 60,
+    sessionRound: 1,
+    breakRound: 1,
+    threadStartTimestamp: Date.now()
+  }
+
+  const inSession = machineState.currentState !== STATE.PAUSED && machineState.currentState !== STATE.BEFORE_RUN
+
+  // 处理状态机事件
+  const handleStateMachineEvent = useCallback(async (event: StateMachineEvent) => {
+    if (!stateMachineRef.current) return
+
+    const result = await stateMachineRef.current.handleEvent(event)
+    
+    // 更新状态机内部状态
+    stateMachineRef.current.updateState(
+      result.newState, 
+      result.restSeconds, 
+      {
+        sessionRound: result.sessionRound,
+        breakRound: result.breakRound,
+        threadStartTimestamp: result.threadStartTimestamp
+      }
+    )
+
+    // 更新 React 状态
+    props.setClockState(result.newState)
+    setRestSeconds(result.restSeconds)
+    
+    if (result.sessionRound !== undefined) {
+      setSessionRound(result.sessionRound)
+    }
+    
+    if (result.breakRound !== undefined) {
+      setBreakRound(result.breakRound)
+    }
+
+    // 处理数据库保存
+    if (result.shouldSaveSession) {
+      await stateMachineRef.current.saveSessionToDB(sessionTime * 60)
+    }
+    
+    if (result.shouldSaveBreak) {
+      await stateMachineRef.current.saveBreakToDB(breakTime * 60)
+    }
+
+    // 处理通知
+    if (result.showNotification) {
+      try {
+        await confirm(result.showNotification.message, result.showNotification.icon)
+        if (!silent) window.focus()
+        // 在用户点击通知后，触发下一个状态
+        if (result.newState === STATE.BEFORE_BREAK) {
+          // 工作时段完成，开始休息
+          await handleStateMachineEvent('START')
+        } else if (result.newState === STATE.BEFORE_RUN) {
+          // 休息时段完成，开始工作
+          await handleStateMachineEvent('START')
+        }
+      } catch (error) {
+        console.error('Notification error:', error)
+      }
+    }
+  }, [props, sessionTime, breakTime, confirm, silent])
+
+  // React 状态
+  const [sessionRound, setSessionRound] = useState(machineState.sessionRound)
+  const [breakRound, setBreakRound] = useState(machineState.breakRound)
+  const [restSeconds, setRestSeconds] = useState(machineState.restSeconds)
+
+  // 获取状态显示文本和时间
+  const stateText = stateMachineRef.current?.getStateText() || 'Ready?'
+  // 使用 React 状态而不是状态机状态来显示时间
+  const displayTime = formatMinAndSec(restSeconds)
+
+  // 创建倒计时
+  const createCountdown = useCallback((onComplete: () => void) => {
+    const cleanup = countdownTime(restSeconds, (newRestSeconds) => {
+      // 更新 React 状态
+      setRestSeconds(newRestSeconds)
+      // 同时更新状态机内部状态以保持同步
+      if (stateMachineRef.current) {
+        const currentState = stateMachineRef.current.getCurrentState()
+        stateMachineRef.current.updateState(
+          currentState.currentState,
+          newRestSeconds,
+          {
+            sessionRound: currentState.sessionRound,
+            breakRound: currentState.breakRound,
+            threadStartTimestamp: currentState.threadStartTimestamp
+          }
+        )
+      }
+    }, () => {
+      try {
+        onComplete()
+      } catch (error) {
+        console.error('Timer complete error:', error)
+      }
+    })
+    return cleanup
+  }, [restSeconds, setRestSeconds, countdownTime])
+
+  // 处理计时器 tick
+  const handleTimerTick = useCallback(() => {
+    handleStateMachineEvent('TIMER_TICK')
+  }, [handleStateMachineEvent])
+
+  // 处理计时器完成
+  const handleTimerComplete = useCallback(() => {
+    handleStateMachineEvent('COMPLETE')
+  }, [handleStateMachineEvent])
+
+  // 启动倒计时
+  const startCountdown = useCallback(() => {
+    if (countdownCleanupRef.current) {
+      countdownCleanupRef.current()
+    }
+    
+    countdownCleanupRef.current = createCountdown(handleTimerComplete)
+  }, [createCountdown, handleTimerComplete])
+
+  // 监听状态变化以启动倒计时
+  useEffect(() => {
+    if (props.clockState === STATE.RUNNING || props.clockState === STATE.BREAKING) {
+      startCountdown()
+    }
+    
+    return () => {
+      if (countdownCleanupRef.current) {
+        countdownCleanupRef.current()
+        countdownCleanupRef.current = null
+      }
+    }
+  }, [props.clockState, startCountdown])
 
   useLayoutEffect(() => {
     if (!inSession && !controlsRect.current)
@@ -131,12 +199,12 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
     value = +value.toFixed(1)
     updateSetting?.({ sessionTime: value })
     setRestSeconds(Math.round(value * 60))
-  }, [])
+  }, [updateSetting])
 
   const onBreakTimeChange = useCallback((value: number) => {
     value = +value.toFixed(1)
     updateSetting?.({ breakTime: value })
-  }, [])
+  }, [updateSetting])
 
   const doStartSession = async (fresh = true) => {
     // request notification permission
@@ -149,50 +217,53 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
 
     const ifAnotherDay = !isEqualDate(currentDate.current!, new Date())
     if (ifAnotherDay || fresh) {
-      threadStartTimestamp.current = Date.now()
+      // 更新线程开始时间戳
+      if (stateMachineRef.current) {
+        const currentState = stateMachineRef.current.getCurrentState()
+        stateMachineRef.current.updateState(
+          currentState.currentState,
+          currentState.restSeconds,
+          { threadStartTimestamp: Date.now() }
+        )
+      }
       setRestSeconds(Math.round(sessionTime * 60))
     }
+    // 如果不是 fresh（即恢复暂停的会话），保持当前的 restSeconds 不变
 
-    props.setClockState(STATE.RUNNING)
+    handleStateMachineEvent('START')
   }
 
-  const doPauseSession = () => props.setClockState(STATE.PAUSED)
+  const doPauseSession = () => handleStateMachineEvent('PAUSE')
 
   // restart current session
   const onResetClick = () => {
     maybeResetContext()
-
     setRestSeconds(Math.round(sessionTime * 60))
-    props.setClockState(STATE.BEFORE_RUN)
-    // save db
-    addThread({
-      type: ThreadType.SESSION,
-      startTimestamp: threadStartTimestamp.current,
-      endTimestamp: Date.now(),
-      expectedTime: sessionTime * 60,
-    }).then(refreshHeatMap)
+    handleStateMachineEvent('RESET')
   }
 
   const doStartBreak = () => {
     maybeResetContext()
-
     closeNotification()
-    threadStartTimestamp.current = Date.now()
-    props.setClockState(STATE.BREAKING)
+    
+    // 更新线程开始时间戳
+    if (stateMachineRef.current) {
+      const currentState = stateMachineRef.current.getCurrentState()
+      stateMachineRef.current.updateState(
+        currentState.currentState,
+        currentState.restSeconds,
+        { threadStartTimestamp: Date.now() }
+      )
+    }
+    
+    handleStateMachineEvent('START')
   }
 
   const doSkipBreak = () => {
     maybeResetContext()
     closeNotification()
     setRestSeconds(Math.round(sessionTime * 60))
-    props.setClockState(STATE.RUNNING)
-    // save db
-    addThread({
-      type: ThreadType.BREAK,
-      startTimestamp: threadStartTimestamp.current,
-      endTimestamp: Date.now(),
-      expectedTime: breakTime * 60,
-    }).then(refreshHeatMap)
+    handleStateMachineEvent('SKIP')
   }
 
   function showNotiPermissionModal() {
@@ -216,10 +287,6 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
     }
   }
 
-  let stateText = inSession ? `Session ${sessionRound}` : 'Ready?'
-  if (props.clockState === STATE.BEFORE_BREAK || props.clockState === STATE.BREAKING)
-    stateText = inSession ? `Break ${breakRound}` : 'Resting'
-
   return (
     <Flipper flipKey={inSession}>
       <div className="flex flex-col items-center select-none">
@@ -229,7 +296,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
                 flex flex-col justify-center items-center bg-pomodoro bg-center bg-no-repeat bg-contain text-xs sm:text-sm xl:text-base 2xl:text-lg"
           >
             <div className="text-[2.2em] leading-tight text-[#FD7477]">{stateText}</div>
-            <div className="text-[4em] leading-none font-semibold text-[#FC5E7B]">{formatMinAndSec(restSeconds)}</div>
+            <div className="text-[4em] leading-none font-semibold text-[#FC5E7B]">{displayTime}</div>
             {props.clockState === STATE.RUNNING && (
               <button
                 className="flex items-center text-[1.4em] leading-tight font-simibold text-[#FC5E7B] cursor-pointer"
@@ -317,7 +384,7 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
             <button className="absolute btn btn-sm btn-circle btn-ghost right-2 top-2">x</button>
             <h3 className="text-lg font-bold">Hello</h3>
             <p className="py-2">
-              {'The app requires you to authorize your browser\'s notification permissions for an optimal experience!'}
+              {"The app requires you to authorize your browser's notification permissions for an optimal experience!"}
             </p>
             <p className="py-2">
               Please click the button in the upper left corner of your browser to re-authorize, or check out
@@ -342,10 +409,6 @@ const PomodoroClock: FC<PomodoroClockProps> = (props) => {
       </div>
     </Flipper>
   )
-}
-
-function isInSession(clockState: STATE) {
-  return clockState !== STATE.PAUSED && clockState !== STATE.BEFORE_RUN
 }
 
 export default PomodoroClock
